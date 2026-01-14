@@ -603,6 +603,7 @@ def new_user():
 
     return render_template('user_form.html')
 
+#initialize the database
 def init_db():
     with app.app_context():
         db.create_all()
