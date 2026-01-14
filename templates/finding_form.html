@@ -66,9 +66,9 @@
                         </div>
                         <div id="editor" contenteditable="true"
                              class="p-4 min-h-[300px] max-h-[500px] overflow-y-auto focus:outline-none"
-                             placeholder="Detailed description, steps to reproduce, expected vs actual behavior...">{{ finding.description if finding else '' }}</div>
+                             placeholder="Detailed description, steps to reproduce, expected vs actual behavior...">{% if finding %}{{ finding.description|safe }}{% endif %}</div>
                     </div>
-                    <input type="hidden" id="description" name="description" value="{{ finding.description if finding else '' }}">
+                    <input type="hidden" id="description" name="description">
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -116,13 +116,12 @@
                     <p class="text-sm text-gray-600 mb-3">Select the screenshots you want to keep. Unchecked screenshots will be deleted when you save.</p>
                     <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
                         {% for screenshot in finding.screenshots %}
-                        <div class="relative group border-2 rounded-lg overflow-hidden" id="screenshot-{{ screenshot.id }}">
+                        <div class="relative group border-2 rounded-lg overflow-hidden screenshot-container" id="screenshot-{{ screenshot.id }}">
                             <input type="checkbox" name="keep_screenshots" value="{{ screenshot.id }}"
                                    id="keep-{{ screenshot.id }}"
                                    class="absolute top-2 left-2 w-5 h-5 z-10 cursor-pointer"
-                                   checked
-                                   onchange="toggleScreenshotSelection({{ screenshot.id }})">
-                            <label for="keep-{{ screenshot.id }}" class="cursor-pointer">
+                                   checked>
+                            <label for="keep-{{ screenshot.id }}" class="cursor-pointer block">
                                 <img src="/{{ screenshot.filepath }}" alt="Screenshot" class="w-full h-32 object-cover">
                                 <div class="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center">
                                     <p class="text-white text-xs text-center px-2">{{ screenshot.filename }}</p>
@@ -159,7 +158,7 @@
                         Cancel
                     </a>
                     {% if finding %}
-                    <button type="button" onclick="if(confirm('Are you sure you want to delete this finding?')) { document.getElementById('deleteForm').submit(); }"
+                    <button type="button" onclick="confirmDelete()"
                             class="bg-red-800 text-white px-6 py-2 rounded-lg hover:bg-red-900 transition ml-auto">
                         <i class="fas fa-trash mr-2"></i>Delete Finding
                     </button>
@@ -169,8 +168,7 @@
         </form>
 
         {% if finding %}
-        <form id="deleteForm" method="POST" action="{{ url_for('delete_finding', finding_id=finding.id) }}" class="hidden">
-        </form>
+        <form id="deleteForm" method="POST" action="{{ url_for('delete_finding', finding_id=finding.id) }}"></form>
         {% endif %}
     </div>
 </div>
@@ -189,54 +187,64 @@
 #editor ul, #editor ol { margin: 1em 0; padding-left: 2em; }
 #editor ul { list-style-type: disc; }
 #editor ol { list-style-type: decimal; }
+
+.screenshot-container.will-delete {
+    border-color: #ef4444;
+}
+
+.screenshot-container.will-keep {
+    border-color: #d1d5db;
+}
 </style>
 
 <script>
-// Rich text editor functions
 function formatDoc(cmd, value = null) {
     document.execCommand(cmd, false, value);
     document.getElementById('editor').focus();
 }
 
-// Sync editor content to hidden input before form submission
+function confirmDelete() {
+    if (confirm('Are you sure you want to delete this finding?')) {
+        document.getElementById('deleteForm').submit();
+    }
+}
+
 document.querySelector('form').addEventListener('submit', function(e) {
     const editorContent = document.getElementById('editor').innerHTML;
     document.getElementById('description').value = editorContent;
 });
 
-// Update editor content on input
 document.getElementById('editor').addEventListener('input', function() {
     document.getElementById('description').value = this.innerHTML;
 });
 
-// Screenshot selection toggle
-function toggleScreenshotSelection(screenshotId) {
-    const checkbox = document.getElementById(`keep-${screenshotId}`);
-    const container = document.getElementById(`screenshot-${screenshotId}`);
+function updateScreenshotUI(checkbox) {
+    const container = checkbox.closest('.screenshot-container');
     const overlay = container.querySelector('.screenshot-overlay');
 
     if (checkbox.checked) {
-        container.classList.remove('border-red-500');
-        container.classList.add('border-gray-200');
+        container.classList.remove('will-delete');
+        container.classList.add('will-keep');
         overlay.classList.add('hidden');
         overlay.classList.remove('flex');
     } else {
-        container.classList.remove('border-gray-200');
-        container.classList.add('border-red-500');
+        container.classList.remove('will-keep');
+        container.classList.add('will-delete');
         overlay.classList.remove('hidden');
         overlay.classList.add('flex');
     }
 }
 
-// Initialize screenshot overlays on page load
 document.addEventListener('DOMContentLoaded', function() {
     document.querySelectorAll('input[name="keep_screenshots"]').forEach(checkbox => {
-        const screenshotId = checkbox.value;
-        toggleScreenshotSelection(screenshotId);
+        updateScreenshotUI(checkbox);
+
+        checkbox.addEventListener('change', function() {
+            updateScreenshotUI(this);
+        });
     });
 });
 
-// Prevent form submission on toolbar button clicks
 document.querySelectorAll('#toolbar button').forEach(button => {
     button.addEventListener('click', function(e) {
         e.preventDefault();

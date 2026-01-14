@@ -30,10 +30,13 @@
                     <td class="px-6 py-4 whitespace-nowrap">
                         <div class="flex items-center">
                             <div class="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center text-white font-bold mr-3">
-                                {{ user.name[0] if user.name else user.email[0] }}
+                                {{ user.name[0].upper() if user.name else user.email[0].upper() }}
                             </div>
                             <div>
                                 <div class="text-sm font-medium text-gray-900">{{ user.name or 'N/A' }}</div>
+                                {% if user.email.lower() == 'admin@zearom.com' %}
+                                    <span class="text-xs text-red-600 font-semibold">System Admin</span>
+                                {% endif %}
                             </div>
                         </div>
                     </td>
@@ -54,11 +57,11 @@
                     <td class="px-6 py-4 whitespace-nowrap">
                         {% if user.is_active %}
                             <span class="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
-                                Active
+                                <i class="fas fa-check-circle mr-1"></i>Active
                             </span>
                         {% else %}
                             <span class="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">
-                                Inactive
+                                <i class="fas fa-times-circle mr-1"></i>Inactive
                             </span>
                         {% endif %}
                     </td>
@@ -72,20 +75,24 @@
                         </div>
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        {% if user.id != current_user.id %}
-                        <form method="POST" action="{{ url_for('toggle_user_active', user_id=user.id) }}" class="inline">
-                            {% if user.is_active %}
-                                <button type="submit" class="text-red-600 hover:text-red-900 mr-3">
-                                    <i class="fas fa-ban mr-1"></i>Deactivate
-                                </button>
-                            {% else %}
-                                <button type="submit" class="text-green-600 hover:text-green-900 mr-3">
-                                    <i class="fas fa-check-circle mr-1"></i>Activate
-                                </button>
-                            {% endif %}
-                        </form>
-                        {% else %}
+                        {% if user.id == current_user.id %}
                             <span class="text-gray-400 italic">You</span>
+                        {% elif user.email.lower() == 'admin@zearom.com' %}
+                            <span class="text-gray-400 italic flex items-center">
+                                <i class="fas fa-lock mr-1"></i>Protected
+                            </span>
+                        {% else %}
+                            <form method="POST" action="{{ url_for('toggle_user_active', user_id=user.id) }}" class="inline">
+                                {% if user.is_active %}
+                                    <button type="submit" class="text-red-600 hover:text-red-900">
+                                        <i class="fas fa-ban mr-1"></i>Deactivate
+                                    </button>
+                                {% else %}
+                                    <button type="submit" class="text-green-600 hover:text-green-900">
+                                        <i class="fas fa-check-circle mr-1"></i>Activate
+                                    </button>
+                                {% endif %}
+                            </form>
                         {% endif %}
                     </td>
                 </tr>
@@ -96,7 +103,7 @@
 </div>
 
 {% if users|length == 0 %}
-<div class="text-center py-12">
+<div class="text-center py-12 mt-8">
     <i class="fas fa-users text-gray-300 text-6xl mb-4"></i>
     <h3 class="text-xl font-semibold text-gray-600 mb-2">No Users</h3>
     <p class="text-gray-500 mb-6">Add users to get started</p>

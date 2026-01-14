@@ -19,12 +19,15 @@ from werkzeug.utils import secure_filename
 from authlib.integrations.flask_client import OAuth
 import secrets
 
+# Get the absolute path of the directory containing this script
+BASE_DIR = os.path.abspath(os.path.dirname(__file__))
+
 # Initialize Flask app
 app = Flask(__name__)
 app.config['SECRET_KEY'] = secrets.token_hex(32)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///zearom_qa.db'
+app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{os.path.join(BASE_DIR, "zearom_qa.db")}'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['UPLOAD_FOLDER'] = 'static/uploads'
+app.config['UPLOAD_FOLDER'] = os.path.join(BASE_DIR, 'static', 'uploads')
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 
 # Google OAuth Config
@@ -549,13 +552,20 @@ def users():
     all_users = User.query.order_by(User.created_at.desc()).all()
     return render_template('users.html', users=all_users)
 
+
 @app.route('/user/<int:user_id>/toggle-active', methods=['POST'])
 @login_required
 def toggle_user_active(user_id):
     user = User.query.get_or_404(user_id)
 
+    # Prevent deactivating yourself
     if user.id == current_user.id:
         flash('You cannot deactivate your own account!', 'error')
+        return redirect(url_for('users'))
+
+    # Prevent deactivating the system admin
+    if user.email.lower() == 'admin@zearom.com':
+        flash('The system administrator account cannot be deactivated!', 'error')
         return redirect(url_for('users'))
 
     user.is_active = not user.is_active
@@ -608,6 +618,8 @@ def init_db():
             db.session.add(admin)
             db.session.commit()
             print("Admin user created: Admin@Zearom.com / Success@Zearom")
+            print(f"Database location: {os.path.join(BASE_DIR, 'zearom_qa.db')}")
+            print(f"Upload folder: {app.config['UPLOAD_FOLDER']}")
 
 if __name__ == '__main__':
     init_db()
