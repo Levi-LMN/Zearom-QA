@@ -1,0 +1,7 @@
+Flask
+Flask-SQLAlchemy
+Flask-Login
+Authlib
+Werkzeug
+Pillow
+requests

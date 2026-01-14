@@ -1,0 +1,246 @@
+{% extends "base.html" %}
+
+{% block title %}{{ 'Edit' if finding else 'New' }} Finding - Zearom QA{% endblock %}
+{% block page_title %}{{ 'Edit' if finding else 'New' }} Finding{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <div class="bg-white rounded-lg shadow p-8">
+        <form method="POST" enctype="multipart/form-data">
+            <div class="space-y-6">
+                <div>
+                    <label for="title" class="block text-sm font-medium text-gray-700 mb-2">Finding Title *</label>
+                    <input type="text" id="title" name="title" required
+                           value="{{ finding.title if finding else '' }}"
+                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                           placeholder="Brief description of the issue">
+                </div>
+
+                <div>
+                    <label for="description" class="block text-sm font-medium text-gray-700 mb-2">Description</label>
+                    <div class="border border-gray-300 rounded-lg">
+                        <div id="toolbar" class="border-b border-gray-300 p-2 bg-gray-50 rounded-t-lg flex flex-wrap gap-1">
+                            <button type="button" onclick="formatDoc('bold')" class="px-3 py-1 bg-white border border-gray-300 rounded hover:bg-gray-100" title="Bold">
+                                <i class="fas fa-bold"></i>
+                            </button>
+                            <button type="button" onclick="formatDoc('italic')" class="px-3 py-1 bg-white border border-gray-300 rounded hover:bg-gray-100" title="Italic">
+                                <i class="fas fa-italic"></i>
+                            </button>
+                            <button type="button" onclick="formatDoc('underline')" class="px-3 py-1 bg-white border border-gray-300 rounded hover:bg-gray-100" title="Underline">
+                                <i class="fas fa-underline"></i>
+                            </button>
+                            <span class="border-r border-gray-300 mx-1"></span>
+                            <button type="button" onclick="formatDoc('insertUnorderedList')" class="px-3 py-1 bg-white border border-gray-300 rounded hover:bg-gray-100" title="Bullet List">
+                                <i class="fas fa-list-ul"></i>
+                            </button>
+                            <button type="button" onclick="formatDoc('insertOrderedList')" class="px-3 py-1 bg-white border border-gray-300 rounded hover:bg-gray-100" title="Numbered List">
+                                <i class="fas fa-list-ol"></i>
+                            </button>
+                            <span class="border-r border-gray-300 mx-1"></span>
+                            <button type="button" onclick="formatDoc('formatBlock', 'h1')" class="px-3 py-1 bg-white border border-gray-300 rounded hover:bg-gray-100" title="Heading 1">
+                                H1
+                            </button>
+                            <button type="button" onclick="formatDoc('formatBlock', 'h2')" class="px-3 py-1 bg-white border border-gray-300 rounded hover:bg-gray-100" title="Heading 2">
+                                H2
+                            </button>
+                            <button type="button" onclick="formatDoc('formatBlock', 'h3')" class="px-3 py-1 bg-white border border-gray-300 rounded hover:bg-gray-100" title="Heading 3">
+                                H3
+                            </button>
+                            <button type="button" onclick="formatDoc('formatBlock', 'p')" class="px-3 py-1 bg-white border border-gray-300 rounded hover:bg-gray-100" title="Paragraph">
+                                P
+                            </button>
+                            <span class="border-r border-gray-300 mx-1"></span>
+                            <button type="button" onclick="formatDoc('justifyLeft')" class="px-3 py-1 bg-white border border-gray-300 rounded hover:bg-gray-100" title="Align Left">
+                                <i class="fas fa-align-left"></i>
+                            </button>
+                            <button type="button" onclick="formatDoc('justifyCenter')" class="px-3 py-1 bg-white border border-gray-300 rounded hover:bg-gray-100" title="Align Center">
+                                <i class="fas fa-align-center"></i>
+                            </button>
+                            <button type="button" onclick="formatDoc('justifyRight')" class="px-3 py-1 bg-white border border-gray-300 rounded hover:bg-gray-100" title="Align Right">
+                                <i class="fas fa-align-right"></i>
+                            </button>
+                            <span class="border-r border-gray-300 mx-1"></span>
+                            <button type="button" onclick="formatDoc('removeFormat')" class="px-3 py-1 bg-white border border-gray-300 rounded hover:bg-gray-100" title="Remove Formatting">
+                                <i class="fas fa-eraser"></i>
+                            </button>
+                        </div>
+                        <div id="editor" contenteditable="true"
+                             class="p-4 min-h-[300px] max-h-[500px] overflow-y-auto focus:outline-none"
+                             placeholder="Detailed description, steps to reproduce, expected vs actual behavior...">{{ finding.description if finding else '' }}</div>
+                    </div>
+                    <input type="hidden" id="description" name="description" value="{{ finding.description if finding else '' }}">
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label for="severity" class="block text-sm font-medium text-gray-700 mb-2">Severity *</label>
+                        <select id="severity" name="severity" required
+                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none">
+                            <option value="Critical" {{ 'selected' if finding and finding.severity == 'Critical' else '' }}>Critical</option>
+                            <option value="High" {{ 'selected' if finding and finding.severity == 'High' else '' }}>High</option>
+                            <option value="Medium" {{ 'selected' if (finding and finding.severity == 'Medium') or not finding else '' }}>Medium</option>
+                            <option value="Low" {{ 'selected' if finding and finding.severity == 'Low' else '' }}>Low</option>
+                        </select>
+                    </div>
+
+                    {% if finding %}
+                    <div>
+                        <label for="status" class="block text-sm font-medium text-gray-700 mb-2">Status *</label>
+                        <select id="status" name="status" required
+                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none">
+                            <option value="Open" {{ 'selected' if finding.status == 'Open' else '' }}>Open</option>
+                            <option value="In Progress" {{ 'selected' if finding.status == 'In Progress' else '' }}>In Progress</option>
+                            <option value="Resolved" {{ 'selected' if finding.status == 'Resolved' else '' }}>Resolved</option>
+                            <option value="Closed" {{ 'selected' if finding.status == 'Closed' else '' }}>Closed</option>
+                        </select>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <div>
+                    <label for="category_id" class="block text-sm font-medium text-gray-700 mb-2">Category</label>
+                    <select id="category_id" name="category_id"
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none">
+                        <option value="">No Category</option>
+                        {% for category in categories %}
+                            <option value="{{ category.id }}" {{ 'selected' if finding and finding.category_id == category.id else '' }}>
+                                {{ category.name }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                {% if finding and finding.screenshots %}
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Current Screenshots</label>
+                    <p class="text-sm text-gray-600 mb-3">Select the screenshots you want to keep. Unchecked screenshots will be deleted when you save.</p>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        {% for screenshot in finding.screenshots %}
+                        <div class="relative group border-2 rounded-lg overflow-hidden" id="screenshot-{{ screenshot.id }}">
+                            <input type="checkbox" name="keep_screenshots" value="{{ screenshot.id }}"
+                                   id="keep-{{ screenshot.id }}"
+                                   class="absolute top-2 left-2 w-5 h-5 z-10 cursor-pointer"
+                                   checked
+                                   onchange="toggleScreenshotSelection({{ screenshot.id }})">
+                            <label for="keep-{{ screenshot.id }}" class="cursor-pointer">
+                                <img src="/{{ screenshot.filepath }}" alt="Screenshot" class="w-full h-32 object-cover">
+                                <div class="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center">
+                                    <p class="text-white text-xs text-center px-2">{{ screenshot.filename }}</p>
+                                    <p class="text-white text-xs mt-1">Click to toggle</p>
+                                </div>
+                            </label>
+                            <div class="screenshot-overlay absolute inset-0 bg-red-500 bg-opacity-50 hidden items-center justify-center">
+                                <div class="text-white text-center">
+                                    <i class="fas fa-trash-alt text-2xl mb-1"></i>
+                                    <p class="text-xs font-semibold">Will be deleted</p>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+
+                <div>
+                    <label for="screenshots" class="block text-sm font-medium text-gray-700 mb-2">
+                        {% if finding %}Add New Screenshots{% else %}Screenshots{% endif %}
+                    </label>
+                    <input type="file" id="screenshots" name="screenshots" multiple accept="image/*"
+                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none">
+                    <p class="text-sm text-gray-500 mt-2">You can select multiple images</p>
+                </div>
+
+                <div class="flex items-center space-x-4">
+                    <button type="submit" class="bg-red-600 text-white px-6 py-2 rounded-lg hover:bg-red-700 transition">
+                        <i class="fas fa-save mr-2"></i>{{ 'Update' if finding else 'Create' }} Finding
+                    </button>
+                    <a href="{{ url_for('finding_detail', finding_id=finding.id) if finding else url_for('session_detail', session_id=testing_session.id) }}"
+                       class="bg-gray-200 text-gray-700 px-6 py-2 rounded-lg hover:bg-gray-300 transition">
+                        Cancel
+                    </a>
+                    {% if finding %}
+                    <button type="button" onclick="if(confirm('Are you sure you want to delete this finding?')) { document.getElementById('deleteForm').submit(); }"
+                            class="bg-red-800 text-white px-6 py-2 rounded-lg hover:bg-red-900 transition ml-auto">
+                        <i class="fas fa-trash mr-2"></i>Delete Finding
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+        </form>
+
+        {% if finding %}
+        <form id="deleteForm" method="POST" action="{{ url_for('delete_finding', finding_id=finding.id) }}" class="hidden">
+        </form>
+        {% endif %}
+    </div>
+</div>
+
+<style>
+#editor[contenteditable]:empty::before {
+    content: attr(placeholder);
+    color: #9CA3AF;
+    pointer-events: none;
+}
+
+#editor h1 { font-size: 2em; font-weight: bold; margin: 0.67em 0; }
+#editor h2 { font-size: 1.5em; font-weight: bold; margin: 0.75em 0; }
+#editor h3 { font-size: 1.17em; font-weight: bold; margin: 0.83em 0; }
+#editor p { margin: 1em 0; }
+#editor ul, #editor ol { margin: 1em 0; padding-left: 2em; }
+#editor ul { list-style-type: disc; }
+#editor ol { list-style-type: decimal; }
+</style>
+
+<script>
+// Rich text editor functions
+function formatDoc(cmd, value = null) {
+    document.execCommand(cmd, false, value);
+    document.getElementById('editor').focus();
+}
+
+// Sync editor content to hidden input before form submission
+document.querySelector('form').addEventListener('submit', function(e) {
+    const editorContent = document.getElementById('editor').innerHTML;
+    document.getElementById('description').value = editorContent;
+});
+
+// Update editor content on input
+document.getElementById('editor').addEventListener('input', function() {
+    document.getElementById('description').value = this.innerHTML;
+});
+
+// Screenshot selection toggle
+function toggleScreenshotSelection(screenshotId) {
+    const checkbox = document.getElementById(`keep-${screenshotId}`);
+    const container = document.getElementById(`screenshot-${screenshotId}`);
+    const overlay = container.querySelector('.screenshot-overlay');
+
+    if (checkbox.checked) {
+        container.classList.remove('border-red-500');
+        container.classList.add('border-gray-200');
+        overlay.classList.add('hidden');
+        overlay.classList.remove('flex');
+    } else {
+        container.classList.remove('border-gray-200');
+        container.classList.add('border-red-500');
+        overlay.classList.remove('hidden');
+        overlay.classList.add('flex');
+    }
+}
+
+// Initialize screenshot overlays on page load
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('input[name="keep_screenshots"]').forEach(checkbox => {
+        const screenshotId = checkbox.value;
+        toggleScreenshotSelection(screenshotId);
+    });
+});
+
+// Prevent form submission on toolbar button clicks
+document.querySelectorAll('#toolbar button').forEach(button => {
+    button.addEventListener('click', function(e) {
+        e.preventDefault();
+    });
+});
+</script>
+{% endblock %}

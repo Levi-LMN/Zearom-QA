@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+
+{% block title %}Projects - Zearom QA{% endblock %}
+{% block page_title %}Projects{% endblock %}
+
+{% block header_actions %}
+<a href="{{ url_for('new_project') }}" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition">
+    <i class="fas fa-plus mr-2"></i>New Project
+</a>
+{% endblock %}
+
+{% block content %}
+{% if projects %}
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {% for project in projects %}
+        <div class="bg-white rounded-lg shadow hover:shadow-lg transition">
+            <div class="p-6">
+                <div class="flex items-start justify-between mb-4">
+                    <div class="flex-1">
+                        <h3 class="text-xl font-bold text-gray-800 mb-2">{{ project.name }}</h3>
+                        <p class="text-gray-600 text-sm">{{ project.description[:150] if project.description else 'No description provided' }}</p>
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-between text-sm text-gray-500 mb-4">
+                    <span><i class="fas fa-flask mr-1"></i>{{ project.sessions|length }} Sessions</span>
+                    <span><i class="fas fa-tag mr-1"></i>{{ project.categories|length }} Categories</span>
+                </div>
+
+                <div class="text-xs text-gray-500 mb-4">
+                    <p>Created by: {{ project.creator.name or project.creator.email }}</p>
+                    <p>Updated: {{ project.updated_at.strftime('%b %d, %Y') }}</p>
+                </div>
+
+                <div class="flex space-x-2">
+                    <a href="{{ url_for('project_detail', project_id=project.id) }}" class="flex-1 bg-blue-600 text-white text-center py-2 rounded-lg hover:bg-blue-700 transition">
+                        View
+                    </a>
+                    <a href="{{ url_for('edit_project', project_id=project.id) }}" class="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 transition">
+                        <i class="fas fa-edit"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+{% else %}
+    <div class="text-center py-12">
+        <i class="fas fa-folder-open text-gray-300 text-6xl mb-4"></i>
+        <h3 class="text-xl font-semibold text-gray-600 mb-2">No Projects Yet</h3>
+        <p class="text-gray-500 mb-6">Create your first project to get started with QA tracking</p>
+        <a href="{{ url_for('new_project') }}" class="inline-block bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition">
+            <i class="fas fa-plus mr-2"></i>Create Project
+        </a>
+    </div>
+{% endif %}
+{% endblock %}
