@@ -18,6 +18,8 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 from authlib.integrations.flask_client import OAuth
 import secrets
+from dotenv import load_dotenv
+
 
 # Get the absolute path of the directory containing this script
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
@@ -42,6 +44,7 @@ db = SQLAlchemy(app)
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 oauth = OAuth(app)
+load_dotenv()
 
 # Configure Google OAuth
 google = oauth.register(
