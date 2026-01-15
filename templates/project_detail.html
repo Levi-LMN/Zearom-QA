@@ -13,25 +13,25 @@
         <span class="text-gray-900 font-medium">{{ project.name }}</span>
     </nav>
 
-    <div class="flex items-start justify-between">
-        <div class="flex-1">
-            <h1 class="text-gray-900 mb-2">{{ project.name }}</h1>
+    <div class="flex flex-col space-y-4 lg:flex-row lg:items-start lg:justify-between lg:space-y-0">
+        <div class="flex-1 min-w-0 lg:pr-6">
+            <h1 class="text-gray-900 mb-2 break-words">{{ project.name }}</h1>
             {% if project.description %}
-            <div class="text-sm text-gray-700 prose prose-sm max-w-none">
+            <div class="text-sm text-gray-700 prose prose-sm max-w-none break-words overflow-hidden">
                 {{ project.description|safe }}
             </div>
             {% else %}
             <p class="text-sm text-gray-500">No description</p>
             {% endif %}
         </div>
-        <div class="flex space-x-3">
-            <a href="{{ url_for('new_category', project_id=project.id) }}" class="text-gray-700 bg-white border border-gray-200 px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-gray-50">
+        <div class="flex flex-col sm:flex-row gap-2 sm:gap-3 lg:flex-shrink-0">
+            <a href="{{ url_for('new_category', project_id=project.id) }}" class="text-center text-gray-700 bg-white border border-gray-200 px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-gray-50 whitespace-nowrap">
                 Add Category
             </a>
-            <a href="{{ url_for('new_module', project_id=project.id) }}" class="text-purple-700 bg-purple-50 border border-purple-200 px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-purple-100">
+            <a href="{{ url_for('new_module', project_id=project.id) }}" class="text-center text-purple-700 bg-purple-50 border border-purple-200 px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-purple-100 whitespace-nowrap">
                 Add Module
             </a>
-            <a href="{{ url_for('new_session', project_id=project.id) }}" class="btn-primary text-white px-5 py-2.5 rounded-lg text-sm font-medium flex items-center">
+            <a href="{{ url_for('new_session', project_id=project.id) }}" class="btn-primary text-white px-5 py-2.5 rounded-lg text-sm font-medium flex items-center justify-center whitespace-nowrap">
                 <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
                 </svg>
@@ -206,6 +206,13 @@
 
 <style>
 /* Prose styling for rich text content */
+.prose {
+    line-height: 1.5;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    word-break: break-word;
+}
+
 .prose h3 {
     font-size: 1.125rem;
     font-weight: 600;
@@ -237,6 +244,7 @@
     font-family: monospace;
     font-size: 0.875em;
     color: #1F2937;
+    word-break: break-all;
 }
 
 .prose pre {
@@ -250,6 +258,7 @@
 .prose pre code {
     background: none;
     padding: 0;
+    word-break: normal;
 }
 
 .prose strong {
@@ -267,15 +276,23 @@
 
 .prose p {
     margin: 0.25rem 0;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
 }
 
 .prose p:empty {
     margin: 0;
 }
 
-/* Keep descriptions compact */
-.prose {
-    line-height: 1.5;
+/* Mobile responsive fixes */
+@media (max-width: 640px) {
+    h1 {
+        font-size: 20px !important;
+    }
+
+    .prose {
+        font-size: 12px;
+    }
 }
 </style>
 {% endblock %}
