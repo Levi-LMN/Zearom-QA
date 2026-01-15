@@ -1,263 +1,106 @@
 {% extends "base.html" %}
 
 {% block title %}{{ project.name }} - Zearom QA{% endblock %}
-{% block page_title %}{{ project.name }}{% endblock %}
-
-{% block header_actions %}
-<div class="flex space-x-2">
-    <a href="{{ url_for('new_category', project_id=project.id) }}" class="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition">
-        <i class="fas fa-tag mr-2"></i>New Category
-    </a>
-    <a href="{{ url_for('new_session', project_id=project.id) }}" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition">
-        <i class="fas fa-flask mr-2"></i>New Session
-    </a>
-    <a href="{{ url_for('edit_project', project_id=project.id) }}" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition">
-        <i class="fas fa-edit mr-2"></i>Edit
-    </a>
-</div>
-{% endblock %}
 
 {% block content %}
-<!-- Project Info -->
-<div class="bg-white rounded-lg shadow p-6 mb-6">
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div>
-            <p class="text-sm text-gray-600 mb-1">Description</p>
-            <p class="text-gray-800">{{ project.description or 'No description provided' }}</p>
+<!-- Page Header -->
+<div class="mb-6">
+    <nav class="flex items-center space-x-2 text-sm mb-4">
+        <a href="{{ url_for('projects') }}" class="text-gray-500 hover:text-gray-700">Projects</a>
+        <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+        </svg>
+        <span class="text-gray-900 font-medium">{{ project.name }}</span>
+    </nav>
+
+    <div class="flex items-start justify-between">
+        <div class="flex-1">
+            <h1 class="text-gray-900 mb-2">{{ project.name }}</h1>
+            <p class="text-sm text-gray-500">{{ project.description or 'No description' }}</p>
         </div>
-        <div>
-            <p class="text-sm text-gray-600 mb-1">Created By</p>
-            <p class="text-gray-800">{{ project.creator.name or project.creator.email }}</p>
-        </div>
-        <div>
-            <p class="text-sm text-gray-600 mb-1">Last Updated</p>
-            <p class="text-gray-800">{{ project.updated_at.strftime('%B %d, %Y at %I:%M %p') }}</p>
+        <div class="flex space-x-3">
+            <a href="{{ url_for('new_category', project_id=project.id) }}" class="text-gray-700 bg-white border border-gray-200 px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-gray-50">
+                Add Category
+            </a>
+            <a href="{{ url_for('new_session', project_id=project.id) }}" class="btn-primary text-white px-5 py-2.5 rounded-lg text-sm font-medium flex items-center">
+                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                </svg>
+                New Session
+            </a>
         </div>
     </div>
 </div>
 
-<!-- Categories Section -->
-<div class="bg-white rounded-lg shadow mb-6">
-    <div class="p-6 border-b border-gray-200 flex items-center justify-between">
-        <h3 class="text-lg font-semibold text-gray-800">Categories ({{ categories|length }})</h3>
-        <a href="{{ url_for('new_category', project_id=project.id) }}" class="text-blue-600 hover:text-blue-700">
-            <i class="fas fa-plus mr-1"></i>Add Category
-        </a>
+<!-- Categories -->
+{% if categories %}
+<div class="mb-6">
+    <h3 class="text-sm font-semibold text-gray-700 mb-3">Categories</h3>
+    <div class="flex flex-wrap gap-2">
+        {% for category in categories %}
+        <div class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm" style="background-color: {{ category.color }}15; color: {{ category.color }};">
+            <span class="w-2 h-2 rounded-full mr-2" style="background-color: {{ category.color }};"></span>
+            {{ category.name }}
+        </div>
+        {% endfor %}
     </div>
-    <div class="p-6">
-        {% if categories %}
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {% for category in categories %}
-                <div class="border border-gray-200 rounded-lg p-4">
-                    <div class="flex items-start justify-between mb-2">
-                        <div class="flex items-center space-x-3 flex-1">
-                            <div class="w-4 h-4 rounded" style="background-color: {{ category.color }}"></div>
-                            <h4 class="font-semibold text-gray-800">{{ category.name }}</h4>
-                        </div>
-                        <a href="{{ url_for('edit_category', category_id=category.id) }}" class="text-blue-600 hover:text-blue-700">
-                            <i class="fas fa-edit"></i>
-                        </a>
+</div>
+{% endif %}
+
+<!-- Testing Sessions -->
+<div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+    <h2 class="font-semibold text-gray-900 mb-5">Testing Sessions</h2>
+
+    <div class="space-y-3">
+        {% for session in sessions_pagination.items %}
+        <a href="{{ url_for('session_detail', session_id=session.id) }}" class="block p-4 border border-gray-100 rounded-xl hover:border-green-200 hover:bg-green-50 transition">
+            <div class="flex items-start justify-between">
+                <div class="flex-1">
+                    <div class="flex items-center space-x-3 mb-2">
+                        <h3 class="font-medium text-gray-900">{{ session.name }}</h3>
+                        <span class="badge {% if session.status == 'Active' %}bg-green-100 text-green-700{% elif session.status == 'Completed' %}bg-blue-100 text-blue-700{% else %}bg-gray-100 text-gray-700{% endif %}">
+                            {{ session.status }}
+                        </span>
                     </div>
-                    <p class="text-sm text-gray-600 mb-2">{{ category.description or 'No description' }}</p>
-                    <p class="text-xs text-gray-500">{{ category.findings|length }} findings</p>
-                    <p class="text-xs text-gray-500">Created by: {{ category.creator.name or category.creator.email }}</p>
+                    <p class="text-sm text-gray-500 mb-3">{{ session.description or 'No description' }}</p>
+                    <div class="flex items-center space-x-4 text-xs text-gray-500">
+                        <span><span class="font-medium text-gray-700">{{ session.findings|length }}</span> findings</span>
+                        <span>•</span>
+                        <span>{{ session.created_at.strftime('%b %d, %Y') }}</span>
+                    </div>
                 </div>
-                {% endfor %}
+                <svg class="w-5 h-5 text-gray-400 ml-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                </svg>
             </div>
+        </a>
         {% else %}
-            <p class="text-gray-500 text-center py-8">No categories yet. Create categories to organize your findings.</p>
+        <div class="text-center py-12">
+            <svg class="w-16 h-16 mx-auto text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+            </svg>
+            <p class="text-sm text-gray-500 mb-4">No testing sessions yet</p>
+            <a href="{{ url_for('new_session', project_id=project.id) }}" class="inline-flex items-center text-sm text-green-600 hover:text-green-700 font-medium">
+                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                </svg>
+                Create your first session
+            </a>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Pagination -->
+    {% if sessions_pagination.pages > 1 %}
+    <div class="flex justify-center mt-6 space-x-2">
+        {% if sessions_pagination.has_prev %}
+        <a href="{{ url_for('project_detail', project_id=project.id, page=sessions_pagination.prev_num) }}" class="px-3 py-2 border border-gray-200 rounded-lg text-sm hover:bg-gray-50">Previous</a>
+        {% endif %}
+        <span class="px-3 py-2 text-sm text-gray-600">Page {{ sessions_pagination.page }} of {{ sessions_pagination.pages }}</span>
+        {% if sessions_pagination.has_next %}
+        <a href="{{ url_for('project_detail', project_id=project.id, page=sessions_pagination.next_num) }}" class="px-3 py-2 border border-gray-200 rounded-lg text-sm hover:bg-gray-50">Next</a>
         {% endif %}
     </div>
+    {% endif %}
 </div>
-
-<!-- Testing Sessions Section -->
-<div class="bg-white rounded-lg shadow">
-    <div class="p-6 border-b border-gray-200 flex items-center justify-between">
-        <h3 class="text-lg font-semibold text-gray-800">Testing Sessions ({{ sessions_pagination.total }})</h3>
-        <a href="{{ url_for('new_session', project_id=project.id) }}" class="text-green-600 hover:text-green-700">
-            <i class="fas fa-plus mr-1"></i>New Session
-        </a>
-    </div>
-    <div class="p-6">
-        {% if sessions_pagination.items %}
-            <!-- Sessions Table -->
-            <div class="overflow-x-auto">
-                <table class="w-full">
-                    <thead class="bg-gray-50 border-b border-gray-200">
-                        <tr>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Session Name</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Findings</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Created</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-gray-200">
-                        {% for session in sessions_pagination.items %}
-                        <tr class="hover:bg-gray-50">
-                            <td class="px-6 py-4">
-                                <div>
-                                    <a href="{{ url_for('session_detail', session_id=session.id) }}" class="text-lg font-semibold text-blue-600 hover:text-blue-700">
-                                        {{ session.name }}
-                                    </a>
-                                    <p class="text-sm text-gray-600 mt-1">{{ session.description[:100] if session.description else 'No description' }}{{ '...' if session.description and session.description|length > 100 else '' }}</p>
-                                </div>
-                            </td>
-                            <td class="px-6 py-4">
-                                <form class="status-form" data-session-id="{{ session.id }}">
-                                    <select name="status" class="status-select px-3 py-1 rounded-full text-xs font-semibold border-0 cursor-pointer
-                                        {% if session.status == 'Active' %}bg-green-100 text-green-700
-                                        {% elif session.status == 'Completed' %}bg-blue-100 text-blue-700
-                                        {% else %}bg-gray-100 text-gray-700{% endif %}"
-                                        onchange="updateSessionStatus({{ session.id }}, this.value)">
-                                        <option value="Active" {% if session.status == 'Active' %}selected{% endif %}>Active</option>
-                                        <option value="Completed" {% if session.status == 'Completed' %}selected{% endif %}>Completed</option>
-                                        <option value="Archived" {% if session.status == 'Archived' %}selected{% endif %}>Archived</option>
-                                    </select>
-                                </form>
-                            </td>
-                            <td class="px-6 py-4">
-                                <span class="text-sm text-gray-600">
-                                    <i class="fas fa-bug text-red-500 mr-1"></i>{{ session.findings|length }}
-                                </span>
-                            </td>
-                            <td class="px-6 py-4 text-sm text-gray-600">
-                                {{ session.created_at.strftime('%b %d, %Y') }}
-                            </td>
-                            <td class="px-6 py-4">
-                                <div class="flex items-center space-x-2">
-                                    <a href="{{ url_for('session_detail', session_id=session.id) }}" class="text-blue-600 hover:text-blue-700" title="View Details">
-                                        <i class="fas fa-eye"></i>
-                                    </a>
-                                    <a href="{{ url_for('edit_session', session_id=session.id) }}" class="text-green-600 hover:text-green-700" title="Edit">
-                                        <i class="fas fa-edit"></i>
-                                    </a>
-                                </div>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-
-            <!-- Pagination -->
-            {% if sessions_pagination.pages > 1 %}
-            <div class="mt-6 flex items-center justify-between border-t border-gray-200 pt-4">
-                <div class="text-sm text-gray-700">
-                    Showing {{ ((sessions_pagination.page - 1) * sessions_pagination.per_page) + 1 }}
-                    to {{ min(sessions_pagination.page * sessions_pagination.per_page, sessions_pagination.total) }}
-                    of {{ sessions_pagination.total }} sessions
-                </div>
-                <div class="flex space-x-2">
-                    {% if sessions_pagination.has_prev %}
-                        <a href="{{ url_for('project_detail', project_id=project.id, page=sessions_pagination.prev_num) }}"
-                           class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
-                            <i class="fas fa-chevron-left mr-1"></i>Previous
-                        </a>
-                    {% else %}
-                        <span class="px-4 py-2 bg-gray-300 text-gray-500 rounded-lg cursor-not-allowed">
-                            <i class="fas fa-chevron-left mr-1"></i>Previous
-                        </span>
-                    {% endif %}
-
-                    <!-- Page Numbers -->
-                    <div class="flex space-x-1">
-                        {% for page_num in sessions_pagination.iter_pages(left_edge=1, right_edge=1, left_current=1, right_current=2) %}
-                            {% if page_num %}
-                                {% if page_num == sessions_pagination.page %}
-                                    <span class="px-4 py-2 bg-blue-600 text-white rounded-lg">{{ page_num }}</span>
-                                {% else %}
-                                    <a href="{{ url_for('project_detail', project_id=project.id, page=page_num) }}"
-                                       class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition">
-                                        {{ page_num }}
-                                    </a>
-                                {% endif %}
-                            {% else %}
-                                <span class="px-4 py-2">...</span>
-                            {% endif %}
-                        {% endfor %}
-                    </div>
-
-                    {% if sessions_pagination.has_next %}
-                        <a href="{{ url_for('project_detail', project_id=project.id, page=sessions_pagination.next_num) }}"
-                           class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
-                            Next<i class="fas fa-chevron-right ml-1"></i>
-                        </a>
-                    {% else %}
-                        <span class="px-4 py-2 bg-gray-300 text-gray-500 rounded-lg cursor-not-allowed">
-                            Next<i class="fas fa-chevron-right ml-1"></i>
-                        </span>
-                    {% endif %}
-                </div>
-            </div>
-            {% endif %}
-        {% else %}
-            <div class="text-center py-12">
-                <i class="fas fa-flask text-gray-300 text-6xl mb-4"></i>
-                <h3 class="text-xl font-semibold text-gray-600 mb-2">No Testing Sessions</h3>
-                <p class="text-gray-500 mb-6">Create your first testing session to start tracking QA findings</p>
-                <a href="{{ url_for('new_session', project_id=project.id) }}" class="inline-block bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition">
-                    <i class="fas fa-plus mr-2"></i>Create Session
-                </a>
-            </div>
-        {% endif %}
-    </div>
-</div>
-
-<script>
-function updateSessionStatus(sessionId, newStatus) {
-    const select = event.target;
-    const originalValue = select.dataset.originalValue || select.value;
-
-    fetch(`/session/${sessionId}/update-status`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: `status=${newStatus}`
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            // Update select styling based on new status
-            select.className = `status-select px-3 py-1 rounded-full text-xs font-semibold border-0 cursor-pointer ${
-                newStatus === 'Active' ? 'bg-green-100 text-green-700' :
-                newStatus === 'Completed' ? 'bg-blue-100 text-blue-700' :
-                'bg-gray-100 text-gray-700'
-            }`;
-            select.dataset.originalValue = newStatus;
-
-            // Show success message
-            showNotification('Status updated successfully', 'success');
-        } else {
-            select.value = originalValue;
-            showNotification('Failed to update status', 'error');
-        }
-    })
-    .catch(error => {
-        select.value = originalValue;
-        showNotification('An error occurred', 'error');
-    });
-}
-
-function showNotification(message, type) {
-    const notification = document.createElement('div');
-    notification.className = `fixed top-4 right-4 px-6 py-3 rounded-lg shadow-lg z-50 ${
-        type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
-    }`;
-    notification.textContent = message;
-    document.body.appendChild(notification);
-
-    setTimeout(() => {
-        notification.remove();
-    }, 3000);
-}
-
-// Store original values on page load
-document.addEventListener('DOMContentLoaded', function() {
-    document.querySelectorAll('.status-select').forEach(select => {
-        select.dataset.originalValue = select.value;
-    });
-});
-</script>
 {% endblock %}

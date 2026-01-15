@@ -5,134 +5,470 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Zearom QA{% endblock %}</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        body { font-size: 14px; }
+        * {
+            font-family: 'Inter', sans-serif;
+        }
+
+        body {
+            font-size: 13px;
+        }
+
+        .sidebar-item {
+            transition: all 0.2s ease;
+        }
+
+        .sidebar-item:hover {
+            background-color: rgba(34, 197, 94, 0.1);
+        }
+
+        .sidebar-item.active {
+            background-color: rgba(34, 197, 94, 0.15);
+            border-left: 3px solid #22c55e;
+        }
+
+        .stat-card {
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+        }
+
+        .badge {
+            font-size: 10px;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-weight: 600;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
+            transition: all 0.2s ease;
+        }
+
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #15803d 0%, #14532d 100%);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(22, 163, 74, 0.3);
+        }
+
+        .progress-ring {
+            transition: stroke-dashoffset 0.5s ease;
+        }
+
+        input, textarea, select {
+            font-size: 13px;
+        }
+
+        h1 { font-size: 28px; font-weight: 700; }
+        h2 { font-size: 20px; font-weight: 600; }
+        h3 { font-size: 16px; font-weight: 600; }
+        h4 { font-size: 14px; font-weight: 600; }
+
+        .text-xs { font-size: 11px; }
+        .text-sm { font-size: 12px; }
+        .text-base { font-size: 13px; }
+        .text-lg { font-size: 15px; }
+
+        /* Curved navbar bottom */
+        .navbar-curved {
+            border-bottom-left-radius: 24px;
+            border-bottom-right-radius: 24px;
+        }
+
+        /* Sidebar styling */
+        .sidebar-container {
+            width: 220px;
+            margin: 12px;
+            border-radius: 20px;
+            background: white;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+        }
+
+        /* Projects dropdown animation */
+        .projects-dropdown {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out;
+        }
+
+        .projects-dropdown.open {
+            max-height: 800px;
+        }
+
+        /* Tree lines for project links */
+        .tree-line {
+            position: relative;
+            padding-left: 20px;
+        }
+
+        .tree-line::before {
+            content: '';
+            position: absolute;
+            left: 8px;
+            top: 0;
+            bottom: 50%;
+            width: 1px;
+            background: #e5e7eb;
+        }
+
+        .tree-line::after {
+            content: '';
+            position: absolute;
+            left: 8px;
+            top: 50%;
+            width: 8px;
+            height: 1px;
+            background: #e5e7eb;
+        }
+
+        .tree-line:last-child::before {
+            bottom: 50%;
+        }
+
+        /* Nested session tree lines */
+        .session-tree-line {
+            position: relative;
+            padding-left: 20px;
+        }
+
+        .session-tree-line::before {
+            content: '';
+            position: absolute;
+            left: 8px;
+            top: 0;
+            bottom: 50%;
+            width: 1px;
+            background: #d1d5db;
+        }
+
+        .session-tree-line::after {
+            content: '';
+            position: absolute;
+            left: 8px;
+            top: 50%;
+            width: 6px;
+            height: 1px;
+            background: #d1d5db;
+        }
+
+        .session-tree-line:last-child::before {
+            bottom: 50%;
+        }
+
+        /* Search results dropdown */
+        .search-results {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .search-result-item {
+            transition: all 0.15s ease;
+        }
+
+        .search-result-item:hover {
+            background-color: #f9fafb;
+        }
     </style>
 </head>
 <body class="bg-gray-50">
-    {% if current_user.is_authenticated %}
     <div class="flex h-screen overflow-hidden">
         <!-- Sidebar -->
-        <aside id="sidebar" class="w-52 bg-gray-900 text-white flex flex-col transition-all duration-300 ease-in-out lg:relative absolute z-50 h-full">
-            <div class="p-3 border-b border-gray-800 flex items-center justify-between">
-                <div>
-                    <h1 class="text-lg font-bold text-blue-400">Zearom QA</h1>
-                    <p class="text-xs text-gray-400">QA System</p>
+        <aside class="sidebar-container flex flex-col">
+            <!-- Logo -->
+            <div class="p-5 border-b border-gray-200">
+                <div class="flex items-center space-x-2">
+                    <div class="w-7 h-7 bg-green-600 rounded-full flex items-center justify-center">
+                        <span class="text-white font-bold text-sm">Z</span>
+                    </div>
+                    <span class="font-bold text-base text-gray-900">Zearom QA</span>
                 </div>
-                <button onclick="toggleSidebar()" class="lg:hidden text-gray-400 hover:text-white">
-                    <i class="fas fa-times text-xl"></i>
-                </button>
             </div>
 
-            <nav class="flex-1 p-2 space-y-1 overflow-y-auto">
-                <a href="{{ url_for('dashboard') }}"
-                   class="flex items-center space-x-2 px-3 py-2 rounded-lg hover:bg-gray-800 transition text-sm {% if request.endpoint == 'dashboard' %}bg-gray-800{% endif %}">
-                    <i class="fas fa-home w-4"></i>
-                    <span>Dashboard</span>
-                </a>
+            <!-- Menu Section -->
+            <div class="flex-1 overflow-y-auto py-3">
+                <div class="px-2 mb-3">
+                    <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2 px-2">Menu</p>
+                    <nav class="space-y-0.5">
+                        <a href="{{ url_for('dashboard') }}" class="sidebar-item flex items-center px-2.5 py-2 text-xs rounded-lg {% if request.endpoint == 'dashboard' %}active text-green-700 font-medium{% else %}text-gray-700{% endif %}">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/>
+                            </svg>
+                            Dashboard
+                        </a>
 
-                <a href="{{ url_for('projects') }}"
-                   class="flex items-center space-x-2 px-3 py-2 rounded-lg hover:bg-gray-800 transition text-sm {% if request.endpoint in ['projects', 'project_detail'] %}bg-gray-800{% endif %}">
-                    <i class="fas fa-folder w-4"></i>
-                    <span>Projects</span>
-                </a>
+                        <!-- Projects with Dropdown -->
+                        <div>
+                            <button onclick="toggleProjectsDropdown()" class="sidebar-item flex items-center justify-between w-full px-2.5 py-2 text-xs rounded-lg {% if request.endpoint in ['projects', 'project_detail', 'session_detail'] %}active text-green-700 font-medium{% else %}text-gray-700{% endif %}">
+                                <div class="flex items-center">
+                                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>
+                                    </svg>
+                                    Projects
+                                </div>
+                                <svg id="projectsChevron" class="w-3 h-3 transition-transform" style="transform: rotate(180deg);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                </svg>
+                            </button>
 
-                <a href="{{ url_for('users') }}"
-                   class="flex items-center space-x-2 px-3 py-2 rounded-lg hover:bg-gray-800 transition text-sm {% if request.endpoint in ['users', 'new_user'] %}bg-gray-800{% endif %}">
-                    <i class="fas fa-users w-4"></i>
-                    <span>Users</span>
-                </a>
-            </nav>
+                            <!-- Projects Dropdown -->
+                            <div id="projectsDropdown" class="projects-dropdown open mt-1">
+                                <div class="ml-3 space-y-0.5">
+                                    <a href="{{ url_for('projects') }}" class="sidebar-item flex items-center px-2.5 py-1.5 text-xs rounded-lg text-gray-600 hover:text-gray-900">
+                                        <svg class="w-3 h-3 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                                        </svg>
+                                        All Projects
+                                    </a>
 
-            <div class="p-2 border-t border-gray-800">
-                <div class="flex items-center space-x-2 mb-2 p-2 bg-gray-800 rounded-lg">
-                    <div class="w-7 h-7 rounded-full bg-blue-500 flex items-center justify-center text-xs font-bold flex-shrink-0">
-                        {{ current_user.name[0].upper() if current_user.name else current_user.email[0].upper() }}
-                    </div>
-                    <div class="flex-1 min-w-0">
-                        <p class="text-xs font-medium truncate">{{ current_user.name or current_user.email.split('@')[0] }}</p>
-                        <p class="text-xs text-gray-400 truncate">{{ current_user.email }}</p>
-                    </div>
+                                    <!-- Recent Projects Tree -->
+                                    {% if sidebar_recent_projects %}
+                                        {% for project in sidebar_recent_projects %}
+                                        <div class="tree-line">
+                                            <div>
+                                                <a href="{{ url_for('project_detail', project_id=project.id) }}"
+                                                   class="sidebar-item flex items-center px-2.5 py-1.5 text-xs rounded-lg text-gray-600 hover:text-gray-900 {% if request.endpoint == 'project_detail' and request.view_args.get('project_id') == project.id %}bg-green-50 text-green-700{% endif %}">
+                                                    <svg class="w-3 h-3 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>
+                                                    </svg>
+                                                    <span class="truncate">{{ project.name[:20] }}{% if project.name|length > 20 %}...{% endif %}</span>
+                                                </a>
+
+                                                <!-- Sessions for this project -->
+                                                {% set sorted_sessions = project.sessions|sort(attribute='updated_at', reverse=True) %}
+                                                {% if sorted_sessions %}
+                                                <div class="ml-3 mt-0.5 space-y-0.5">
+                                                    {% for session in sorted_sessions %}
+                                                    {% if loop.index <= 3 %}
+                                                    <div class="session-tree-line">
+                                                        <a href="{{ url_for('session_detail', session_id=session.id) }}"
+                                                           class="sidebar-item flex items-center px-2 py-1 text-xs rounded-lg text-gray-500 hover:text-gray-900 {% if request.endpoint == 'session_detail' and request.view_args.get('session_id') == session.id %}bg-green-50 text-green-700{% endif %}">
+                                                            <svg class="w-2.5 h-2.5 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                                                            </svg>
+                                                            <span class="truncate">{{ session.name[:18] }}{% if session.name|length > 18 %}...{% endif %}</span>
+                                                        </a>
+                                                    </div>
+                                                    {% endif %}
+                                                    {% endfor %}
+                                                </div>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                        {% endfor %}
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <a href="{{ url_for('users') }}" class="sidebar-item flex items-center px-2.5 py-2 text-xs rounded-lg {% if request.endpoint == 'users' %}active text-green-700 font-medium{% else %}text-gray-700{% endif %}">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/>
+                            </svg>
+                            Team
+                        </a>
+                    </nav>
                 </div>
-                <a href="{{ url_for('logout') }}"
-                   class="flex items-center justify-center space-x-2 px-2 py-2 rounded-lg bg-red-600 hover:bg-red-700 transition text-xs">
-                    <i class="fas fa-sign-out-alt"></i>
-                    <span>Logout</span>
-                </a>
+
+                <!-- General Section -->
+                <div class="px-2">
+                    <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2 px-2">General</p>
+                    <nav class="space-y-0.5">
+                        <a href="{{ url_for('logout') }}" class="sidebar-item flex items-center px-2.5 py-2 text-xs rounded-lg text-gray-700">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+                            </svg>
+                            Logout
+                        </a>
+                    </nav>
+                </div>
             </div>
         </aside>
 
-        <!-- Overlay for mobile -->
-        <div id="overlay" class="fixed inset-0 bg-black bg-opacity-50 z-40 hidden lg:hidden" onclick="toggleSidebar()"></div>
-
         <!-- Main Content -->
-        <div class="flex-1 flex flex-col overflow-hidden">
-            <!-- Top Bar -->
-            <header class="bg-white border-b border-gray-200 px-4 py-3">
-                <div class="flex items-center justify-between">
-                    <div class="flex items-center space-x-3">
-                        <button onclick="toggleSidebar()" class="lg:hidden text-gray-600 hover:text-gray-800">
-                            <i class="fas fa-bars text-xl"></i>
-                        </button>
-                        <h2 class="text-lg font-bold text-gray-800">{% block page_title %}{% endblock %}</h2>
+        <main class="flex-1 overflow-y-auto">
+            <!-- Header -->
+            <header class="bg-white border-b border-gray-200 sticky top-0 z-10 navbar-curved shadow-sm">
+                <div class="flex items-center justify-between px-8 py-4">
+                    <div class="flex items-center flex-1">
+                        <div class="relative max-w-md w-full">
+                            <input type="text"
+                                   id="globalSearch"
+                                   placeholder="Search projects, sessions, findings..."
+                                   class="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                                   autocomplete="off">
+                            <svg class="w-5 h-5 absolute left-3 top-2.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                            </svg>
+
+                            <!-- Search Results Dropdown -->
+                            <div id="searchResults" class="hidden absolute top-full left-0 right-0 mt-2 bg-white border border-gray-200 rounded-lg shadow-lg search-results z-50">
+                                <div id="searchResultsContent" class="p-2"></div>
+                            </div>
+                        </div>
                     </div>
-                    <div>
-                        {% block header_actions %}{% endblock %}
+
+                    <div class="flex items-center space-x-4">
+                        <button class="p-2 hover:bg-gray-100 rounded-lg transition">
+                            <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                            </svg>
+                        </button>
+                        <button class="p-2 hover:bg-gray-100 rounded-lg transition">
+                            <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+                            </svg>
+                        </button>
+                        <div class="flex items-center space-x-3 pl-4 border-l border-gray-200">
+                            <div class="text-right">
+                                <p class="text-xs font-semibold text-gray-900">{{ current_user.name or current_user.email.split('@')[0] }}</p>
+                                <p class="text-xs text-gray-500" style="font-size: 10px;">{{ current_user.email }}</p>
+                            </div>
+                            <div class="w-9 h-9 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center">
+                                <span class="text-white font-semibold text-xs">{{ current_user.name[0] if current_user.name else current_user.email[0].upper() }}</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </header>
 
-            <!-- Page Content -->
-            <main class="flex-1 overflow-y-auto p-4">
-                {% with messages = get_flashed_messages(with_categories=true) %}
-                    {% if messages %}
-                        <div class="mb-4 space-y-2">
-                            {% for category, message in messages %}
-                                <div class="px-4 py-3 rounded-lg text-sm {% if category == 'error' %}bg-red-100 text-red-700 border border-red-400{% else %}bg-green-100 text-green-700 border border-green-400{% endif %}">
-                                    {{ message }}
+            <!-- Flash Messages -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    <div class="px-8 pt-4">
+                        {% for category, message in messages %}
+                            <div class="mb-3 p-4 rounded-lg {% if category == 'success' %}bg-green-50 text-green-800 border border-green-200{% else %}bg-red-50 text-red-800 border border-red-200{% endif %}">
+                                <div class="flex items-center">
+                                    {% if category == 'success' %}
+                                        <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                                        </svg>
+                                    {% else %}
+                                        <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+                                        </svg>
+                                    {% endif %}
+                                    <span class="text-sm">{{ message }}</span>
                                 </div>
-                            {% endfor %}
-                        </div>
-                    {% endif %}
-                {% endwith %}
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            {% endwith %}
 
+            <!-- Page Content -->
+            <div class="px-8 py-6">
                 {% block content %}{% endblock %}
-            </main>
-        </div>
+            </div>
+        </main>
     </div>
 
     <script>
-        function toggleSidebar() {
-            const sidebar = document.getElementById('sidebar');
-            const overlay = document.getElementById('overlay');
+        // Toggle Projects Dropdown
+        function toggleProjectsDropdown() {
+            const dropdown = document.getElementById('projectsDropdown');
+            const chevron = document.getElementById('projectsChevron');
+            dropdown.classList.toggle('open');
+            chevron.style.transform = dropdown.classList.contains('open') ? 'rotate(180deg)' : 'rotate(0deg)';
+        }
 
-            if (window.innerWidth < 1024) {
-                sidebar.classList.toggle('-translate-x-full');
-                overlay.classList.toggle('hidden');
+        // Global Search Functionality
+        const searchInput = document.getElementById('globalSearch');
+        const searchResults = document.getElementById('searchResults');
+        const searchResultsContent = document.getElementById('searchResultsContent');
+        let searchTimeout;
+
+        searchInput.addEventListener('input', function(e) {
+            clearTimeout(searchTimeout);
+            const query = e.target.value.trim();
+
+            if (query.length < 2) {
+                searchResults.classList.add('hidden');
+                return;
+            }
+
+            searchTimeout = setTimeout(() => {
+                performSearch(query);
+            }, 300);
+        });
+
+        async function performSearch(query) {
+            searchResultsContent.innerHTML = '<div class="p-3 text-center text-gray-500 text-xs">Searching...</div>';
+            searchResults.classList.remove('hidden');
+
+            try {
+                const response = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
+                const data = await response.json();
+
+                if (data.results && data.results.length > 0) {
+                    let resultsHTML = '<div class="space-y-1">';
+                    resultsHTML += `<div class="px-3 py-1 text-xs font-semibold text-gray-400 uppercase">Results for "${query}"</div>`;
+
+                    data.results.forEach(result => {
+                        let icon = '';
+                        let colorClass = '';
+
+                        if (result.type === 'project') {
+                            icon = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>';
+                            colorClass = 'text-green-600';
+                        } else if (result.type === 'session') {
+                            icon = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>';
+                            colorClass = 'text-blue-600';
+                        } else if (result.type === 'finding') {
+                            icon = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>';
+                            colorClass = 'text-orange-600';
+                        }
+
+                        resultsHTML += `
+                            <a href="${result.url}" class="search-result-item block px-3 py-2 hover:bg-gray-50 rounded text-xs">
+                                <div class="flex items-start">
+                                    <svg class="w-4 h-4 mr-2 mt-0.5 ${colorClass}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        ${icon}
+                                    </svg>
+                                    <div class="flex-1">
+                                        <div class="font-medium text-gray-900">${result.title}</div>
+                                        <div class="text-gray-500">${result.subtitle}</div>
+                                    </div>
+                                </div>
+                            </a>
+                        `;
+                    });
+
+                    resultsHTML += `
+                        <div class="px-3 py-2 text-xs text-gray-500 text-center border-t border-gray-100 mt-1">
+                            Press Enter to see all results
+                        </div>
+                    `;
+                    resultsHTML += '</div>';
+                    searchResultsContent.innerHTML = resultsHTML;
+                } else {
+                    searchResultsContent.innerHTML = '<div class="p-3 text-center text-gray-500 text-xs">No results found</div>';
+                }
+            } catch (error) {
+                console.error('Search error:', error);
+                searchResultsContent.innerHTML = '<div class="p-3 text-center text-red-500 text-xs">Search failed. Please try again.</div>';
             }
         }
 
-        // Close sidebar when clicking outside on mobile
-        window.addEventListener('resize', function() {
-            if (window.innerWidth >= 1024) {
-                document.getElementById('sidebar').classList.remove('-translate-x-full');
-                document.getElementById('overlay').classList.add('hidden');
-            } else {
-                document.getElementById('sidebar').classList.add('-translate-x-full');
+        // Close search results when clicking outside
+        document.addEventListener('click', function(e) {
+            if (!searchInput.contains(e.target) && !searchResults.contains(e.target)) {
+                searchResults.classList.add('hidden');
             }
         });
 
-        // Initialize sidebar state on load
-        document.addEventListener('DOMContentLoaded', function() {
-            if (window.innerWidth < 1024) {
-                document.getElementById('sidebar').classList.add('-translate-x-full');
+        // Handle Enter key for full search
+        searchInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                const query = e.target.value.trim();
+                if (query) {
+                    window.location.href = `/search?q=${encodeURIComponent(query)}`;
+                }
             }
         });
     </script>
-
-    {% else %}
-    {% block login_content %}{% endblock %}
-    {% endif %}
 </body>
 </html>

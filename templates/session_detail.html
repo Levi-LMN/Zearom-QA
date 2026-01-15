@@ -1,301 +1,307 @@
 {% extends "base.html" %}
 
 {% block title %}{{ testing_session.name }} - Zearom QA{% endblock %}
-{% block page_title %}{{ testing_session.name }}{% endblock %}
-
-{% block header_actions %}
-<div class="flex space-x-2">
-    <a href="{{ url_for('new_finding', session_id=testing_session.id) }}" class="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition">
-        <i class="fas fa-bug mr-2"></i>New Finding
-    </a>
-    <a href="{{ url_for('edit_session', session_id=testing_session.id) }}" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition">
-        <i class="fas fa-edit mr-2"></i>Edit
-    </a>
-    <a href="{{ url_for('project_detail', project_id=testing_session.project_id) }}" class="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition">
-        <i class="fas fa-arrow-left mr-2"></i>Back to Project
-    </a>
-</div>
-{% endblock %}
 
 {% block content %}
-<!-- Session Info -->
-<div class="bg-white rounded-lg shadow p-6 mb-6">
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div>
-            <p class="text-sm text-gray-600 mb-1">Project</p>
-            <a href="{{ url_for('project_detail', project_id=testing_session.project_id) }}" class="text-blue-600 hover:text-blue-700 font-medium">
-                {{ testing_session.project.name }}
-            </a>
-        </div>
-        <div>
-            <p class="text-sm text-gray-600 mb-1">Status</p>
-            {% if testing_session.status == 'Active' %}
-                <span class="px-3 py-1 bg-green-100 text-green-700 text-sm font-semibold rounded-full">Active</span>
-            {% elif testing_session.status == 'Completed' %}
-                <span class="px-3 py-1 bg-blue-100 text-blue-700 text-sm font-semibold rounded-full">Completed</span>
+<!-- Page Header -->
+<div class="mb-6">
+    <nav class="flex items-center space-x-2 text-sm mb-4">
+        <a href="{{ url_for('projects') }}" class="text-gray-500 hover:text-gray-700">Projects</a>
+        <span class="text-gray-400">/</span>
+        <a href="{{ url_for('project_detail', project_id=testing_session.project_id) }}" class="text-gray-500 hover:text-gray-700">{{ testing_session.project.name }}</a>
+        <span class="text-gray-400">/</span>
+        <span class="text-gray-900 font-medium">{{ testing_session.name }}</span>
+    </nav>
+
+    <div class="flex items-start justify-between">
+        <div class="flex-1">
+            <div class="flex items-center space-x-3 mb-2">
+                <h1 class="text-gray-900">{{ testing_session.name }}</h1>
+                <span class="badge {% if testing_session.status == 'Active' %}bg-green-100 text-green-700{% elif testing_session.status == 'Completed' %}bg-blue-100 text-blue-700{% else %}bg-gray-100 text-gray-700{% endif %}">
+                    {{ testing_session.status }}
+                </span>
+            </div>
+            {% if testing_session.description %}
+            <div class="text-sm text-gray-700 prose prose-sm max-w-none">
+                {{ testing_session.description|safe }}
+            </div>
             {% else %}
-                <span class="px-3 py-1 bg-gray-100 text-gray-700 text-sm font-semibold rounded-full">Archived</span>
+            <p class="text-sm text-gray-500">No description</p>
             {% endif %}
         </div>
-        <div>
-            <p class="text-sm text-gray-600 mb-1">Created</p>
-            <p class="text-gray-800">{{ testing_session.created_at.strftime('%b %d, %Y') }}</p>
-        </div>
-        <div>
-            <p class="text-sm text-gray-600 mb-1">Total Findings</p>
-            <p class="text-2xl font-bold text-gray-800">{{ all_findings|length }}</p>
+        <div class="flex space-x-3">
+            <a href="{{ url_for('edit_session', session_id=testing_session.id) }}" class="text-gray-700 bg-white border border-gray-200 px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-gray-50">
+                Edit Session
+            </a>
+            <a href="{{ url_for('new_finding', session_id=testing_session.id) }}" class="btn-primary text-white px-5 py-2.5 rounded-lg text-sm font-medium">
+                Add Finding
+            </a>
         </div>
     </div>
-    {% if testing_session.description %}
-    <div class="mt-4 pt-4 border-t border-gray-200">
-        <p class="text-sm text-gray-600 mb-1">Description</p>
-        <p class="text-gray-800">{{ testing_session.description }}</p>
-    </div>
-    {% endif %}
 </div>
 
 <!-- Stats -->
-<div class="grid grid-cols-3 md:grid-cols-6 gap-4 mb-6">
-    <div class="bg-white rounded-lg shadow p-4">
-        <p class="text-xs text-gray-600 mb-1">Total</p>
-        <p class="text-2xl font-bold text-gray-800">{{ all_findings|length }}</p>
+<div class="grid grid-cols-1 md:grid-cols-4 gap-5 mb-6">
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+        <h4 class="text-sm text-gray-600 mb-2">Total Findings</h4>
+        <p class="text-3xl font-bold text-gray-900">{{ all_findings|length }}</p>
     </div>
-    <div class="bg-white rounded-lg shadow p-4">
-        <p class="text-xs text-gray-600 mb-1">Open</p>
-        <p class="text-2xl font-bold text-yellow-600">{{ all_findings|selectattr('status', 'equalto', 'Open')|list|length }}</p>
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+        <h4 class="text-sm text-gray-600 mb-2">Open</h4>
+        <p class="text-3xl font-bold text-red-600">
+            {% set open_count = namespace(value=0) %}
+            {% for finding in all_findings %}
+                {% if finding.status == 'Open' %}
+                    {% set open_count.value = open_count.value + 1 %}
+                {% endif %}
+            {% endfor %}
+            {{ open_count.value }}
+        </p>
     </div>
-    <div class="bg-white rounded-lg shadow p-4">
-        <p class="text-xs text-gray-600 mb-1">Critical</p>
-        <p class="text-2xl font-bold text-red-600">{{ all_findings|selectattr('severity', 'equalto', 'Critical')|list|length }}</p>
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+        <h4 class="text-sm text-gray-600 mb-2">In Progress</h4>
+        <p class="text-3xl font-bold text-blue-600">
+            {% set progress_count = namespace(value=0) %}
+            {% for finding in all_findings %}
+                {% if finding.status == 'In Progress' %}
+                    {% set progress_count.value = progress_count.value + 1 %}
+                {% endif %}
+            {% endfor %}
+            {{ progress_count.value }}
+        </p>
     </div>
-    <div class="bg-white rounded-lg shadow p-4">
-        <p class="text-xs text-gray-600 mb-1">High</p>
-        <p class="text-2xl font-bold text-orange-600">{{ all_findings|selectattr('severity', 'equalto', 'High')|list|length }}</p>
-    </div>
-    <div class="bg-white rounded-lg shadow p-4">
-        <p class="text-xs text-gray-600 mb-1">Medium</p>
-        <p class="text-2xl font-bold text-yellow-600">{{ all_findings|selectattr('severity', 'equalto', 'Medium')|list|length }}</p>
-    </div>
-    <div class="bg-white rounded-lg shadow p-4">
-        <p class="text-xs text-gray-600 mb-1">Low</p>
-        <p class="text-2xl font-bold text-blue-600">{{ all_findings|selectattr('severity', 'equalto', 'Low')|list|length }}</p>
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+        <h4 class="text-sm text-gray-600 mb-2">Resolved</h4>
+        <p class="text-3xl font-bold text-green-600">
+            {% set resolved_count = namespace(value=0) %}
+            {% for finding in all_findings %}
+                {% if finding.status == 'Resolved' %}
+                    {% set resolved_count.value = resolved_count.value + 1 %}
+                {% endif %}
+            {% endfor %}
+            {{ resolved_count.value }}
+        </p>
     </div>
 </div>
 
 <!-- Findings Table -->
-<div class="bg-white rounded-lg shadow">
-    <div class="p-6 border-b border-gray-200 flex items-center justify-between">
-        <h3 class="text-lg font-semibold text-gray-800">Findings ({{ findings_pagination.total }})</h3>
-        <a href="{{ url_for('new_finding', session_id=testing_session.id) }}" class="text-red-600 hover:text-red-700">
-            <i class="fas fa-plus mr-1"></i>Add Finding
-        </a>
+<div class="bg-white rounded-2xl shadow-sm border border-gray-100">
+    <!-- Search Bar -->
+    <div class="p-6 border-b border-gray-200">
+        <form method="GET" action="{{ url_for('session_detail', session_id=testing_session.id) }}" class="flex items-center space-x-3">
+            <div class="flex-1 relative">
+                <input type="text"
+                       name="search"
+                       value="{{ search_query or '' }}"
+                       placeholder="Search findings by title or description..."
+                       class="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm">
+                <svg class="w-5 h-5 absolute left-3 top-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                </svg>
+            </div>
+            <button type="submit" class="btn-primary text-white px-5 py-2.5 rounded-lg text-sm font-medium">
+                Search
+            </button>
+            {% if search_query %}
+            <a href="{{ url_for('session_detail', session_id=testing_session.id) }}" class="text-gray-700 bg-white border border-gray-200 px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-gray-50">
+                Clear
+            </a>
+            {% endif %}
+        </form>
     </div>
 
+    <!-- Table -->
     <div class="overflow-x-auto">
-        {% if findings_pagination.items %}
         <table class="w-full">
             <thead class="bg-gray-50 border-b border-gray-200">
                 <tr>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Title</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Severity</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Category</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Created</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Finding</th>
+                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Category</th>
+                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Severity</th>
+                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Status</th>
+                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Created</th>
+                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Actions</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-gray-200">
                 {% for finding in findings_pagination.items %}
-                <tr class="hover:bg-gray-50">
+                <tr class="hover:bg-gray-50 transition">
                     <td class="px-6 py-4">
-                        <a href="{{ url_for('finding_detail', finding_id=finding.id) }}" class="text-blue-600 hover:text-blue-700 font-medium">
+                        <a href="{{ url_for('finding_detail', finding_id=finding.id) }}" class="font-medium text-gray-900 hover:text-green-600">
                             {{ finding.title }}
                         </a>
-                        {% if finding.description %}
-                        <div class="text-sm text-gray-600 mt-1 finding-description-preview">
-                            {{ finding.description|safe|truncate(100) }}
-                        </div>
+                        {% if finding.screenshots %}
+                        <span class="text-xs text-gray-500 ml-2">📎 {{ finding.screenshots|length }}</span>
                         {% endif %}
                     </td>
                     <td class="px-6 py-4">
-                        {% if finding.severity == 'Critical' %}
-                            <span class="px-2 py-1 bg-red-100 text-red-700 text-xs font-semibold rounded">Critical</span>
-                        {% elif finding.severity == 'High' %}
-                            <span class="px-2 py-1 bg-orange-100 text-orange-700 text-xs font-semibold rounded">High</span>
-                        {% elif finding.severity == 'Medium' %}
-                            <span class="px-2 py-1 bg-yellow-100 text-yellow-700 text-xs font-semibold rounded">Medium</span>
+                        {% if finding.category %}
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium" style="background-color: {{ finding.category.color }}15; color: {{ finding.category.color }};">
+                            {{ finding.category.name }}
+                        </span>
                         {% else %}
-                            <span class="px-2 py-1 bg-blue-100 text-blue-700 text-xs font-semibold rounded">Low</span>
+                        <span class="text-xs text-gray-400">—</span>
                         {% endif %}
                     </td>
                     <td class="px-6 py-4">
-                        <select name="status"
-                                class="status-select px-2 py-1 rounded text-xs font-semibold border-0 cursor-pointer
-                                {% if finding.status == 'Open' %}bg-red-100 text-red-700
-                                {% elif finding.status == 'In Progress' %}bg-yellow-100 text-yellow-700
-                                {% elif finding.status == 'Resolved' %}bg-green-100 text-green-700
-                                {% else %}bg-gray-100 text-gray-700{% endif %}"
-                                onchange="updateFindingStatus({{ finding.id }}, this.value)">
+                        <span class="badge {% if finding.severity == 'Critical' %}bg-red-100 text-red-700{% elif finding.severity == 'High' %}bg-orange-100 text-orange-700{% elif finding.severity == 'Medium' %}bg-yellow-100 text-yellow-700{% else %}bg-blue-100 text-blue-700{% endif %}">
+                            {{ finding.severity }}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4">
+                        <select onchange="updateFindingStatus({{ finding.id }}, this.value)"
+                                class="text-sm border-0 rounded-lg cursor-pointer focus:ring-2 focus:ring-green-500 {% if finding.status == 'Open' %}bg-red-50 text-red-700{% elif finding.status == 'In Progress' %}bg-blue-50 text-blue-700{% elif finding.status == 'Resolved' %}bg-green-50 text-green-700{% else %}bg-gray-50 text-gray-700{% endif %}">
                             <option value="Open" {% if finding.status == 'Open' %}selected{% endif %}>Open</option>
                             <option value="In Progress" {% if finding.status == 'In Progress' %}selected{% endif %}>In Progress</option>
                             <option value="Resolved" {% if finding.status == 'Resolved' %}selected{% endif %}>Resolved</option>
                             <option value="Closed" {% if finding.status == 'Closed' %}selected{% endif %}>Closed</option>
                         </select>
                     </td>
-                    <td class="px-6 py-4">
-                        {% if finding.category %}
-                            <span class="px-2 py-1 text-white text-xs font-semibold rounded" style="background-color: {{ finding.category.color }}">
-                                {{ finding.category.name }}
-                            </span>
-                        {% else %}
-                            <span class="text-gray-400 text-sm">-</span>
-                        {% endif %}
-                    </td>
-                    <td class="px-6 py-4 text-sm text-gray-600">
-                        <div>{{ finding.created_at.strftime('%b %d, %Y') }}</div>
-                        <div class="text-xs text-gray-500">{{ finding.creator.name or finding.creator.email }}</div>
+                    <td class="px-6 py-4 text-sm text-gray-500">
+                        {{ finding.created_at.strftime('%b %d, %Y') }}
                     </td>
                     <td class="px-6 py-4">
                         <div class="flex items-center space-x-2">
-                            <a href="{{ url_for('finding_detail', finding_id=finding.id) }}" class="text-blue-600 hover:text-blue-700" title="View">
-                                <i class="fas fa-eye"></i>
+                            <a href="{{ url_for('finding_detail', finding_id=finding.id) }}" class="text-sm text-blue-600 hover:text-blue-700 font-medium">
+                                View
                             </a>
-                            <a href="{{ url_for('edit_finding', finding_id=finding.id) }}" class="text-green-600 hover:text-green-700" title="Edit">
-                                <i class="fas fa-edit"></i>
+                            <span class="text-gray-300">|</span>
+                            <a href="{{ url_for('edit_finding', finding_id=finding.id) }}" class="text-sm text-gray-600 hover:text-gray-700 font-medium">
+                                Edit
                             </a>
                         </div>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="6" class="px-6 py-12 text-center">
+                        {% if search_query %}
+                        <svg class="w-16 h-16 mx-auto text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                        </svg>
+                        <p class="text-sm text-gray-500 mb-4">No findings match your search</p>
+                        <a href="{{ url_for('session_detail', session_id=testing_session.id) }}" class="text-sm text-green-600 hover:text-green-700 font-medium">
+                            Clear search
+                        </a>
+                        {% else %}
+                        <svg class="w-16 h-16 mx-auto text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                        </svg>
+                        <p class="text-sm text-gray-500 mb-4">No findings yet</p>
+                        <a href="{{ url_for('new_finding', session_id=testing_session.id) }}" class="inline-flex items-center text-sm text-green-600 hover:text-green-700 font-medium">
+                            Add your first finding
+                        </a>
+                        {% endif %}
                     </td>
                 </tr>
                 {% endfor %}
             </tbody>
         </table>
-
-        <!-- Pagination -->
-        {% if findings_pagination.pages > 1 %}
-        <div class="p-6 border-t border-gray-200 flex items-center justify-between">
-            <div class="text-sm text-gray-700">
-                Showing {{ ((findings_pagination.page - 1) * findings_pagination.per_page) + 1 }}
-                to {{ min(findings_pagination.page * findings_pagination.per_page, findings_pagination.total) }}
-                of {{ findings_pagination.total }} findings
-            </div>
-            <div class="flex space-x-2">
-                {% if findings_pagination.has_prev %}
-                    <a href="{{ url_for('session_detail', session_id=testing_session.id, page=findings_pagination.prev_num) }}"
-                       class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
-                        <i class="fas fa-chevron-left mr-1"></i>Previous
-                    </a>
-                {% else %}
-                    <span class="px-4 py-2 bg-gray-300 text-gray-500 rounded-lg cursor-not-allowed">
-                        <i class="fas fa-chevron-left mr-1"></i>Previous
-                    </span>
-                {% endif %}
-
-                <div class="flex space-x-1">
-                    {% for page_num in findings_pagination.iter_pages(left_edge=1, right_edge=1, left_current=1, right_current=2) %}
-                        {% if page_num %}
-                            {% if page_num == findings_pagination.page %}
-                                <span class="px-4 py-2 bg-blue-600 text-white rounded-lg">{{ page_num }}</span>
-                            {% else %}
-                                <a href="{{ url_for('session_detail', session_id=testing_session.id, page=page_num) }}"
-                                   class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition">
-                                    {{ page_num }}
-                                </a>
-                            {% endif %}
-                        {% else %}
-                            <span class="px-2 py-2">...</span>
-                        {% endif %}
-                    {% endfor %}
-                </div>
-
-                {% if findings_pagination.has_next %}
-                    <a href="{{ url_for('session_detail', session_id=testing_session.id, page=findings_pagination.next_num) }}"
-                       class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
-                        Next<i class="fas fa-chevron-right ml-1"></i>
-                    </a>
-                {% else %}
-                    <span class="px-4 py-2 bg-gray-300 text-gray-500 rounded-lg cursor-not-allowed">
-                        Next<i class="fas fa-chevron-right ml-1"></i>
-                    </span>
-                {% endif %}
-            </div>
-        </div>
-        {% endif %}
-
-        {% else %}
-        <div class="text-center py-12">
-            <i class="fas fa-bug text-gray-300 text-6xl mb-4"></i>
-            <h3 class="text-xl font-semibold text-gray-600 mb-2">No Findings Yet</h3>
-            <p class="text-gray-500 mb-6">Start documenting QA issues and bugs for this session</p>
-            <a href="{{ url_for('new_finding', session_id=testing_session.id) }}" class="inline-block bg-red-600 text-white px-6 py-3 rounded-lg hover:bg-red-700 transition">
-                <i class="fas fa-plus mr-2"></i>Create Finding
-            </a>
-        </div>
-        {% endif %}
     </div>
+
+    <!-- Pagination -->
+    {% if findings_pagination.pages > 1 %}
+    <div class="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
+        <div class="text-sm text-gray-600">
+            Showing {{ ((findings_pagination.page - 1) * findings_pagination.per_page) + 1 }}
+            to {{ [findings_pagination.page * findings_pagination.per_page, findings_pagination.total] | min }}
+            of {{ findings_pagination.total }} findings
+        </div>
+        <div class="flex space-x-2">
+            {% if findings_pagination.has_prev %}
+            <a href="{{ url_for('session_detail', session_id=testing_session.id, page=findings_pagination.prev_num, search=search_query) }}"
+               class="px-4 py-2 border border-gray-200 rounded-lg text-sm hover:bg-gray-50">
+                Previous
+            </a>
+            {% endif %}
+
+            <span class="px-4 py-2 text-sm text-gray-600">
+                Page {{ findings_pagination.page }} of {{ findings_pagination.pages }}
+            </span>
+
+            {% if findings_pagination.has_next %}
+            <a href="{{ url_for('session_detail', session_id=testing_session.id, page=findings_pagination.next_num, search=search_query) }}"
+               class="px-4 py-2 border border-gray-200 rounded-lg text-sm hover:bg-gray-50">
+                Next
+            </a>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
 </div>
 
 <style>
-.finding-description-preview h1,
-.finding-description-preview h2,
-.finding-description-preview h3,
-.finding-description-preview p,
-.finding-description-preview ul,
-.finding-description-preview ol {
-    display: inline;
-    font-size: inherit;
-    font-weight: inherit;
-    margin: 0;
+/* Prose styling for rich text content */
+.prose h3 {
+    font-size: 1.125rem;
+    font-weight: 600;
+    margin: 0.5rem 0 0.25rem 0;
+    color: #1F2937;
+}
+
+.prose ul, .prose ol {
+    margin: 0.25rem 0;
+    padding-left: 1.5rem;
+}
+
+.prose ul {
+    list-style-type: disc;
+}
+
+.prose ol {
+    list-style-type: decimal;
+}
+
+.prose li {
+    margin: 0.125rem 0;
+}
+
+.prose strong {
+    font-weight: 600;
+}
+
+.prose em {
+    font-style: italic;
+}
+
+.prose u {
+    text-decoration: underline;
+}
+
+.prose p {
+    margin: 0.25rem 0;
 }
 </style>
 
 <script>
 function updateFindingStatus(findingId, newStatus) {
-    const select = event.target;
-    const originalValue = select.dataset.originalValue || select.value;
+    if (confirm(`Update status to ${newStatus}?`)) {
+        const formData = new FormData();
+        formData.append('status', newStatus);
 
-    fetch(`/finding/${findingId}/update-status`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: `status=${encodeURIComponent(newStatus)}`
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            select.className = `status-select px-2 py-1 rounded text-xs font-semibold border-0 cursor-pointer ${
-                newStatus === 'Open' ? 'bg-red-100 text-red-700' :
-                newStatus === 'In Progress' ? 'bg-yellow-100 text-yellow-700' :
-                newStatus === 'Resolved' ? 'bg-green-100 text-green-700' :
-                'bg-gray-100 text-gray-700'
-            }`;
-            select.dataset.originalValue = newStatus;
-            showNotification('Status updated successfully', 'success');
-        } else {
-            select.value = originalValue;
-            showNotification('Failed to update status', 'error');
-        }
-    })
-    .catch(error => {
-        select.value = originalValue;
-        showNotification('An error occurred', 'error');
-    });
+        fetch(`/finding/${findingId}/update-status`, {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Reload page to update stats
+                location.reload();
+            } else {
+                alert('Failed to update status');
+                location.reload();
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Failed to update status');
+            location.reload();
+        });
+    } else {
+        // Reset select to previous value
+        location.reload();
+    }
 }
-
-function showNotification(message, type) {
-    const notification = document.createElement('div');
-    notification.className = `fixed top-4 right-4 px-6 py-3 rounded-lg shadow-lg z-50 ${
-        type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
-    }`;
-    notification.textContent = message;
-    document.body.appendChild(notification);
-    setTimeout(() => notification.remove(), 3000);
-}
-
-document.addEventListener('DOMContentLoaded', function() {
-    document.querySelectorAll('.status-select').forEach(select => {
-        select.dataset.originalValue = select.value;
-    });
-});
 </script>
 {% endblock %}

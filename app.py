@@ -3,7 +3,7 @@ Zearom QA Management System
 A comprehensive Flask application for managing QA projects, testing sessions, and findings.
 
 Installation:
-pip install flask flask-sqlalchemy flask-login authlib werkzeug pillow
+pip install flask flask-sqlalchemy flask-login authlib werkzeug pillow python-dotenv
 
 Run:
 python app.py
@@ -22,7 +22,6 @@ from dotenv import load_dotenv
 
 # Load environment variables FIRST
 load_dotenv()
-
 
 # Get the absolute path of the directory containing this script
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
@@ -48,7 +47,6 @@ login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 oauth = OAuth(app)
 
-
 # Configure Google OAuth
 google = oauth.register(
     name='google',
@@ -57,6 +55,7 @@ google = oauth.register(
     server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
     client_kwargs={'scope': 'openid email profile'}
 )
+
 
 # Models
 class User(UserMixin, db.Model):
@@ -70,7 +69,10 @@ class User(UserMixin, db.Model):
 
     projects = db.relationship('Project', backref='creator', lazy=True)
     categories = db.relationship('Category', backref='creator', lazy=True)
-    findings = db.relationship('Finding', backref='creator', lazy=True)
+    findings = db.relationship('Finding', foreign_keys='Finding.created_by', backref='creator', lazy=True)
+    status_updates = db.relationship('Finding', foreign_keys='Finding.status_updated_by', backref='status_updater',
+                                     lazy=True)
+
 
 class Project(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -83,41 +85,47 @@ class Project(db.Model):
     sessions = db.relationship('TestingSession', backref='project', lazy=True, cascade='all, delete-orphan')
     categories = db.relationship('Category', backref='project', lazy=True, cascade='all, delete-orphan')
 
+
 class Category(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
     description = db.Column(db.Text)
-    color = db.Column(db.String(7), default='#3B82F6')  # Hex color
+    color = db.Column(db.String(7), default='#3B82F6')
     project_id = db.Column(db.Integer, db.ForeignKey('project.id'), nullable=False)
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     findings = db.relationship('Finding', backref='category', lazy=True)
 
+
 class TestingSession(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(200), nullable=False)
     description = db.Column(db.Text)
-    status = db.Column(db.String(50), default='Active')  # Active, Completed, Archived
+    status = db.Column(db.String(50), default='Active')
     project_id = db.Column(db.Integer, db.ForeignKey('project.id'), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     findings = db.relationship('Finding', backref='session', lazy=True, cascade='all, delete-orphan')
 
+
 class Finding(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(200), nullable=False)
     description = db.Column(db.Text)
-    severity = db.Column(db.String(50), default='Medium')  # Critical, High, Medium, Low
-    status = db.Column(db.String(50), default='Open')  # Open, In Progress, Resolved, Closed
+    severity = db.Column(db.String(50), default='Medium')
+    status = db.Column(db.String(50), default='Open')
     session_id = db.Column(db.Integer, db.ForeignKey('testing_session.id'), nullable=False)
     category_id = db.Column(db.Integer, db.ForeignKey('category.id'))
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    status_updated_by = db.Column(db.Integer, db.ForeignKey('user.id'))
+    status_updated_at = db.Column(db.DateTime)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     screenshots = db.relationship('Screenshot', backref='finding', lazy=True, cascade='all, delete-orphan')
+
 
 class Screenshot(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -126,9 +134,21 @@ class Screenshot(db.Model):
     finding_id = db.Column(db.Integer, db.ForeignKey('finding.id'), nullable=False)
     uploaded_at = db.Column(db.DateTime, default=datetime.utcnow)
 
+
 @login_manager.user_loader
 def load_user(user_id):
     return User.query.get(int(user_id))
+
+
+# Context processor for sidebar
+@app.context_processor
+def inject_sidebar_data():
+    if current_user.is_authenticated:
+        recent_projects = Project.query.filter_by(created_by=current_user.id) \
+            .order_by(Project.updated_at.desc()).limit(3).all()
+        return dict(sidebar_recent_projects=recent_projects)
+    return dict(sidebar_recent_projects=[])
+
 
 # CRITICAL: Add explicit route for serving uploaded files
 @app.route('/static/uploads/<path:filename>')
@@ -136,12 +156,14 @@ def uploaded_file(filename):
     """Serve uploaded files from the uploads directory"""
     return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
+
 # Routes
 @app.route('/')
 def index():
     if current_user.is_authenticated:
         return redirect(url_for('dashboard'))
     return redirect(url_for('login'))
+
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -164,10 +186,12 @@ def login():
 
     return render_template('login.html')
 
+
 @app.route('/login/google')
 def google_login():
     redirect_uri = url_for('callback', _external=True)
     return google.authorize_redirect(redirect_uri)
+
 
 @app.route('/callback')
 def callback():
@@ -197,11 +221,111 @@ def callback():
         flash('Google login failed. Please try again.', 'error')
         return redirect(url_for('login'))
 
+
 @app.route('/logout')
 @login_required
 def logout():
     logout_user()
     return redirect(url_for('login'))
+
+
+@app.route('/search')
+@login_required
+def search():
+    query = request.args.get('q', '').strip()
+
+    if not query:
+        return redirect(url_for('dashboard'))
+
+    # Search across projects, sessions, and findings
+    projects = Project.query.filter(
+        db.or_(
+            Project.name.ilike(f'%{query}%'),
+            Project.description.ilike(f'%{query}%')
+        )
+    ).all()
+
+    sessions = TestingSession.query.filter(
+        db.or_(
+            TestingSession.name.ilike(f'%{query}%'),
+            TestingSession.description.ilike(f'%{query}%')
+        )
+    ).all()
+
+    findings = Finding.query.filter(
+        db.or_(
+            Finding.title.ilike(f'%{query}%'),
+            Finding.description.ilike(f'%{query}%')
+        )
+    ).all()
+
+    return render_template('search.html',
+                           query=query,
+                           projects=projects,
+                           sessions=sessions,
+                           findings=findings)
+
+
+@app.route('/api/search')
+@login_required
+def api_search():
+    query = request.args.get('q', '').strip()
+
+    if not query or len(query) < 2:
+        return jsonify({'results': []})
+
+    results = []
+
+    # Search projects
+    projects = Project.query.filter(
+        db.or_(
+            Project.name.ilike(f'%{query}%'),
+            Project.description.ilike(f'%{query}%')
+        )
+    ).limit(5).all()
+
+    for project in projects:
+        results.append({
+            'type': 'project',
+            'title': project.name,
+            'subtitle': 'Project',
+            'url': url_for('project_detail', project_id=project.id)
+        })
+
+    # Search sessions
+    sessions = TestingSession.query.filter(
+        db.or_(
+            TestingSession.name.ilike(f'%{query}%'),
+            TestingSession.description.ilike(f'%{query}%')
+        )
+    ).limit(5).all()
+
+    for session in sessions:
+        results.append({
+            'type': 'session',
+            'title': session.name,
+            'subtitle': f'Session in {session.project.name}',
+            'url': url_for('session_detail', session_id=session.id)
+        })
+
+    # Search findings
+    findings = Finding.query.filter(
+        db.or_(
+            Finding.title.ilike(f'%{query}%'),
+            Finding.description.ilike(f'%{query}%')
+        )
+    ).limit(5).all()
+
+    for finding in findings:
+        results.append({
+            'type': 'finding',
+            'title': finding.title,
+            'subtitle': f'{finding.severity} - {finding.status}',
+            'url': url_for('finding_detail', finding_id=finding.id)
+        })
+
+    return jsonify({'results': results[:10]})
+
 
 @app.route('/dashboard')
 @login_required
@@ -218,11 +342,13 @@ def dashboard():
 
     return render_template('dashboard.html', projects=projects, recent_findings=recent_findings, stats=stats)
 
+
 @app.route('/projects')
 @login_required
 def projects():
     all_projects = Project.query.order_by(Project.updated_at.desc()).all()
     return render_template('projects.html', projects=all_projects)
+
 
 @app.route('/project/new', methods=['GET', 'POST'])
 @login_required
@@ -240,23 +366,24 @@ def new_project():
 
     return render_template('project_form.html')
 
+
 @app.route('/project/<int:project_id>')
 @login_required
 def project_detail(project_id):
     project = Project.query.get_or_404(project_id)
 
-    # Pagination for sessions
     page = request.args.get('page', 1, type=int)
     per_page = 10
-    sessions_pagination = TestingSession.query.filter_by(project_id=project_id)\
-        .order_by(TestingSession.created_at.desc())\
+    sessions_pagination = TestingSession.query.filter_by(project_id=project_id) \
+        .order_by(TestingSession.created_at.desc()) \
         .paginate(page=page, per_page=per_page, error_out=False)
 
     categories = Category.query.filter_by(project_id=project_id).all()
     return render_template('project_detail.html',
-                         project=project,
-                         sessions_pagination=sessions_pagination,
-                         categories=categories)
+                           project=project,
+                           sessions_pagination=sessions_pagination,
+                           categories=categories)
+
 
 @app.route('/project/<int:project_id>/edit', methods=['GET', 'POST'])
 @login_required
@@ -274,6 +401,7 @@ def edit_project(project_id):
 
     return render_template('project_form.html', project=project)
 
+
 @app.route('/project/<int:project_id>/delete', methods=['POST'])
 @login_required
 def delete_project(project_id):
@@ -282,6 +410,7 @@ def delete_project(project_id):
     db.session.commit()
     flash('Project deleted successfully!', 'success')
     return redirect(url_for('projects'))
+
 
 @app.route('/project/<int:project_id>/category/new', methods=['GET', 'POST'])
 @login_required
@@ -307,6 +436,7 @@ def new_category(project_id):
         return redirect(url_for('project_detail', project_id=project_id))
 
     return render_template('category_form.html', project=project)
+
 
 @app.route('/session/new/<int:project_id>', methods=['GET', 'POST'])
 @login_required
@@ -337,21 +467,30 @@ def session_detail(session_id):
     testing_session = TestingSession.query.get_or_404(session_id)
     categories = Category.query.filter_by(project_id=testing_session.project_id).all()
 
-    # Pagination for findings
-    page = request.args.get('page', 1, type=int)
-    per_page = 10
-    findings_pagination = Finding.query.filter_by(session_id=session_id) \
-        .order_by(Finding.created_at.desc()) \
-        .paginate(page=page, per_page=per_page, error_out=False)
+    search_query = request.args.get('search', '').strip()
+    findings_query = Finding.query.filter_by(session_id=session_id)
 
-    # Get all findings for stats (not paginated)
+    if search_query:
+        findings_query = findings_query.filter(
+            db.or_(
+                Finding.title.ilike(f'%{search_query}%'),
+                Finding.description.ilike(f'%{search_query}%')
+            )
+        )
+
+    page = request.args.get('page', 1, type=int)
+    per_page = 20
+    findings_pagination = findings_query.order_by(Finding.created_at.desc()).paginate(page=page, per_page=per_page,
+                                                                                      error_out=False)
+
     all_findings = Finding.query.filter_by(session_id=session_id).all()
 
     return render_template('session_detail.html',
                            testing_session=testing_session,
                            findings_pagination=findings_pagination,
                            all_findings=all_findings,
-                           categories=categories)
+                           categories=categories,
+                           search_query=search_query)
 
 
 @app.route('/finding/<int:finding_id>/update-status', methods=['POST'])
@@ -362,11 +501,14 @@ def update_finding_status(finding_id):
 
     if new_status in ['Open', 'In Progress', 'Resolved', 'Closed']:
         finding.status = new_status
+        finding.status_updated_by = current_user.id
+        finding.status_updated_at = datetime.utcnow()
         finding.updated_at = datetime.utcnow()
         db.session.commit()
         return jsonify({'success': True, 'message': f'Status updated to {new_status}'})
 
     return jsonify({'success': False, 'message': 'Invalid status'}), 400
+
 
 @app.route('/session/<int:session_id>/edit', methods=['GET', 'POST'])
 @login_required
@@ -385,6 +527,7 @@ def edit_session(session_id):
 
     return render_template('session_form.html', testing_session=testing_session, project=testing_session.project)
 
+
 @app.route('/session/<int:session_id>/update-status', methods=['POST'])
 @login_required
 def update_session_status(session_id):
@@ -398,6 +541,7 @@ def update_session_status(session_id):
         return jsonify({'success': True, 'message': f'Status updated to {new_status}'})
 
     return jsonify({'success': False, 'message': 'Invalid status'}), 400
+
 
 @app.route('/finding/new/<int:session_id>', methods=['GET', 'POST'])
 @login_required
@@ -422,7 +566,6 @@ def new_finding(session_id):
         db.session.add(finding)
         db.session.commit()
 
-        # Handle file uploads
         if 'screenshots' in request.files:
             files = request.files.getlist('screenshots')
             for file in files:
@@ -447,11 +590,13 @@ def new_finding(session_id):
 
     return render_template('finding_form.html', testing_session=testing_session, categories=categories)
 
+
 @app.route('/finding/<int:finding_id>')
 @login_required
 def finding_detail(finding_id):
     finding = Finding.query.get_or_404(finding_id)
     return render_template('finding_detail.html', finding=finding)
+
 
 @app.route('/finding/<int:finding_id>/edit', methods=['GET', 'POST'])
 @login_required
@@ -468,11 +613,9 @@ def edit_finding(finding_id):
         finding.category_id = category_id if category_id else None
         finding.updated_at = datetime.utcnow()
 
-        # Handle screenshot deletions
         screenshots_to_keep = request.form.getlist('keep_screenshots')
         for screenshot in finding.screenshots:
             if str(screenshot.id) not in screenshots_to_keep:
-                # Delete file from filesystem
                 try:
                     if os.path.exists(screenshot.filepath):
                         os.remove(screenshot.filepath)
@@ -480,7 +623,6 @@ def edit_finding(finding_id):
                     pass
                 db.session.delete(screenshot)
 
-        # Handle new file uploads
         if 'screenshots' in request.files:
             files = request.files.getlist('screenshots')
             for file in files:
@@ -504,6 +646,7 @@ def edit_finding(finding_id):
 
     return render_template('finding_form.html', finding=finding, categories=categories, testing_session=finding.session)
 
+
 @app.route('/finding/<int:finding_id>/delete', methods=['POST'])
 @login_required
 def delete_finding(finding_id):
@@ -514,13 +657,13 @@ def delete_finding(finding_id):
     flash('Finding deleted successfully!', 'success')
     return redirect(url_for('session_detail', session_id=session_id))
 
+
 @app.route('/screenshot/<int:screenshot_id>/delete', methods=['POST'])
 @login_required
 def delete_screenshot(screenshot_id):
     screenshot = Screenshot.query.get_or_404(screenshot_id)
     finding_id = screenshot.finding_id
 
-    # Delete the file from filesystem
     try:
         if os.path.exists(screenshot.filepath):
             os.remove(screenshot.filepath)
@@ -531,6 +674,7 @@ def delete_screenshot(screenshot_id):
     db.session.commit()
     flash('Screenshot deleted successfully!', 'success')
     return redirect(url_for('edit_finding', finding_id=finding_id))
+
 
 @app.route('/category/<int:category_id>/edit', methods=['GET', 'POST'])
 @login_required
@@ -548,6 +692,7 @@ def edit_category(category_id):
 
     return render_template('category_form.html', category=category, project=category.project)
 
+
 @app.route('/category/<int:category_id>/delete', methods=['POST'])
 @login_required
 def delete_category(category_id):
@@ -557,6 +702,7 @@ def delete_category(category_id):
     db.session.commit()
     flash('Category deleted successfully!', 'success')
     return redirect(url_for('project_detail', project_id=project_id))
+
 
 @app.route('/users')
 @login_required
@@ -570,12 +716,10 @@ def users():
 def toggle_user_active(user_id):
     user = User.query.get_or_404(user_id)
 
-    # Prevent deactivating yourself
     if user.id == current_user.id:
         flash('You cannot deactivate your own account!', 'error')
         return redirect(url_for('users'))
 
-    # Prevent deactivating the system admin
     if user.email.lower() == 'admin@zearom.com':
         flash('The system administrator account cannot be deactivated!', 'error')
         return redirect(url_for('users'))
@@ -586,6 +730,7 @@ def toggle_user_active(user_id):
     status = 'activated' if user.is_active else 'deactivated'
     flash(f'User {user.email} has been {status}!', 'success')
     return redirect(url_for('users'))
+
 
 @app.route('/user/new', methods=['GET', 'POST'])
 @login_required
@@ -615,7 +760,7 @@ def new_user():
 
     return render_template('user_form.html')
 
-#initialize the database
+
 def init_db():
     with app.app_context():
         db.create_all()
@@ -631,8 +776,12 @@ def init_db():
             db.session.add(admin)
             db.session.commit()
             print("Admin user created: Admin@Zearom.com / Success@Zearom")
-            print(f"Database location: {os.path.join(BASE_DIR, 'zearom_qa.db')}")
-            print(f"Upload folder: {app.config['UPLOAD_FOLDER']}")
+
+        print(f"Database location: {os.path.join(BASE_DIR, 'zearom_qa.db')}")
+        print(f"Upload folder: {app.config['UPLOAD_FOLDER']}")
+
+
+
 
 if __name__ == '__main__':
     init_db()

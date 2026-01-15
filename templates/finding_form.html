@@ -1,254 +1,342 @@
 {% extends "base.html" %}
 
-{% block title %}{{ 'Edit' if finding else 'New' }} Finding - Zearom QA{% endblock %}
-{% block page_title %}{{ 'Edit' if finding else 'New' }} Finding{% endblock %}
+{% block title %}{% if finding %}Edit{% else %}New{% endif %} Finding - Zearom QA{% endblock %}
 
 {% block content %}
-<div class="max-w-4xl mx-auto">
-    <div class="bg-white rounded-lg shadow p-8">
+<div class="max-w-3xl mx-auto">
+    <div class="mb-6">
+        <h1 class="text-gray-900 mb-1">{% if finding %}Edit{% else %}New{% endif %} Finding</h1>
+        <p class="text-sm text-gray-500">{% if finding %}Update finding details{% else %}Report a new finding in {{ testing_session.name }}{% endif %}</p>
+    </div>
+
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
         <form method="POST" enctype="multipart/form-data">
-            <div class="space-y-6">
+            <div class="space-y-5">
                 <div>
-                    <label for="title" class="block text-sm font-medium text-gray-700 mb-2">Finding Title *</label>
-                    <input type="text" id="title" name="title" required
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Title *</label>
+                    <input type="text" name="title" required
                            value="{{ finding.title if finding else '' }}"
-                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-                           placeholder="Brief description of the issue">
+                           class="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                           placeholder="Brief description of the finding">
                 </div>
 
                 <div>
-                    <label for="description" class="block text-sm font-medium text-gray-700 mb-2">Description</label>
-                    <div class="border border-gray-300 rounded-lg">
-                        <div id="toolbar" class="border-b border-gray-300 p-2 bg-gray-50 rounded-t-lg flex flex-wrap gap-1">
-                            <button type="button" onclick="formatDoc('bold')" class="px-3 py-1 bg-white border border-gray-300 rounded hover:bg-gray-100" title="Bold">
-                                <i class="fas fa-bold"></i>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Description *</label>
+                    <div class="border border-gray-200 rounded-lg overflow-hidden">
+                        <!-- Toolbar -->
+                        <div class="bg-gray-50 border-b border-gray-200 px-3 py-2 flex flex-wrap gap-1">
+                            <button type="button" onclick="formatText('bold')" class="p-2 hover:bg-gray-200 rounded" title="Bold">
+                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                    <path d="M6 4v12h4.5c1.76 0 3.5-1.24 3.5-3.5 0-1.4-.7-2.6-1.9-3.1.7-.5 1.4-1.3 1.4-2.4 0-2.26-1.74-3-3.5-3H6zm2 2h2c.83 0 1.5.67 1.5 1.5S10.83 9 10 9H8V6zm0 5h2.5c1.1 0 2 .9 2 2s-.9 2-2 2H8v-4z"/>
+                                </svg>
                             </button>
-                            <button type="button" onclick="formatDoc('italic')" class="px-3 py-1 bg-white border border-gray-300 rounded hover:bg-gray-100" title="Italic">
-                                <i class="fas fa-italic"></i>
+                            <button type="button" onclick="formatText('italic')" class="p-2 hover:bg-gray-200 rounded" title="Italic">
+                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                    <path d="M10 4v2h2.21l-3.42 8H6v2h8v-2h-2.21l3.42-8H18V4h-8z"/>
+                                </svg>
                             </button>
-                            <button type="button" onclick="formatDoc('underline')" class="px-3 py-1 bg-white border border-gray-300 rounded hover:bg-gray-100" title="Underline">
-                                <i class="fas fa-underline"></i>
+                            <button type="button" onclick="formatText('underline')" class="p-2 hover:bg-gray-200 rounded" title="Underline">
+                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                    <path d="M10 3c-2.76 0-5 2.24-5 5v5h2V8c0-1.65 1.35-3 3-3s3 1.35 3 3v5h2V8c0-2.76-2.24-5-5-5zm-6 14h12v2H4v-2z"/>
+                                </svg>
                             </button>
-                            <span class="border-r border-gray-300 mx-1"></span>
-                            <button type="button" onclick="formatDoc('insertUnorderedList')" class="px-3 py-1 bg-white border border-gray-300 rounded hover:bg-gray-100" title="Bullet List">
-                                <i class="fas fa-list-ul"></i>
+                            <div class="w-px h-6 bg-gray-300 mx-1"></div>
+                            <button type="button" onclick="formatText('insertUnorderedList')" class="p-2 hover:bg-gray-200 rounded" title="Bullet List">
+                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                    <path d="M4 6a2 2 0 110-4 2 2 0 010 4zm0 6a2 2 0 110-4 2 2 0 010 4zm0 6a2 2 0 110-4 2 2 0 010 4zm4-11h10v2H8V7zm0 6h10v2H8v-2zm0 6h10v2H8v-2z"/>
+                                </svg>
                             </button>
-                            <button type="button" onclick="formatDoc('insertOrderedList')" class="px-3 py-1 bg-white border border-gray-300 rounded hover:bg-gray-100" title="Numbered List">
-                                <i class="fas fa-list-ol"></i>
+                            <button type="button" onclick="formatText('insertOrderedList')" class="p-2 hover:bg-gray-200 rounded" title="Numbered List">
+                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                    <path d="M3 4h2v2H3V4zm0 4h2v2H3V8zm0 4h2v2H3v-2zm5-7h10v2H8V5zm0 6h10v2H8v-2zm0 6h10v2H8v-2z"/>
+                                </svg>
                             </button>
-                            <span class="border-r border-gray-300 mx-1"></span>
-                            <button type="button" onclick="formatDoc('formatBlock', 'h1')" class="px-3 py-1 bg-white border border-gray-300 rounded hover:bg-gray-100" title="Heading 1">
-                                H1
-                            </button>
-                            <button type="button" onclick="formatDoc('formatBlock', 'h2')" class="px-3 py-1 bg-white border border-gray-300 rounded hover:bg-gray-100" title="Heading 2">
-                                H2
-                            </button>
-                            <button type="button" onclick="formatDoc('formatBlock', 'h3')" class="px-3 py-1 bg-white border border-gray-300 rounded hover:bg-gray-100" title="Heading 3">
-                                H3
-                            </button>
-                            <button type="button" onclick="formatDoc('formatBlock', 'p')" class="px-3 py-1 bg-white border border-gray-300 rounded hover:bg-gray-100" title="Paragraph">
-                                P
-                            </button>
-                            <span class="border-r border-gray-300 mx-1"></span>
-                            <button type="button" onclick="formatDoc('justifyLeft')" class="px-3 py-1 bg-white border border-gray-300 rounded hover:bg-gray-100" title="Align Left">
-                                <i class="fas fa-align-left"></i>
-                            </button>
-                            <button type="button" onclick="formatDoc('justifyCenter')" class="px-3 py-1 bg-white border border-gray-300 rounded hover:bg-gray-100" title="Align Center">
-                                <i class="fas fa-align-center"></i>
-                            </button>
-                            <button type="button" onclick="formatDoc('justifyRight')" class="px-3 py-1 bg-white border border-gray-300 rounded hover:bg-gray-100" title="Align Right">
-                                <i class="fas fa-align-right"></i>
-                            </button>
-                            <span class="border-r border-gray-300 mx-1"></span>
-                            <button type="button" onclick="formatDoc('removeFormat')" class="px-3 py-1 bg-white border border-gray-300 rounded hover:bg-gray-100" title="Remove Formatting">
-                                <i class="fas fa-eraser"></i>
+                            <div class="w-px h-6 bg-gray-300 mx-1"></div>
+                            <button type="button" onclick="formatText('formatBlock', 'h3')" class="p-2 hover:bg-gray-200 rounded text-xs font-semibold" title="Heading">H</button>
+                            <button type="button" onclick="insertCode()" class="p-2 hover:bg-gray-200 rounded" title="Code Block">
+                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M12.316 3.051a1 1 0 01.633 1.265l-4 12a1 1 0 11-1.898-.632l4-12a1 1 0 011.265-.633zM5.707 6.293a1 1 0 010 1.414L3.414 10l2.293 2.293a1 1 0 11-1.414 1.414l-3-3a1 1 0 010-1.414l3-3a1 1 0 011.414 0zm8.586 0a1 1 0 011.414 0l3 3a1 1 0 010 1.414l-3 3a1 1 0 11-1.414-1.414L16.586 10l-2.293-2.293a1 1 0 010-1.414z"/>
+                                </svg>
                             </button>
                         </div>
-                        <div id="editor" contenteditable="true"
-                             class="p-4 min-h-[300px] max-h-[500px] overflow-y-auto focus:outline-none"
-                             placeholder="Detailed description, steps to reproduce, expected vs actual behavior...">{% if finding %}{{ finding.description|safe }}{% endif %}</div>
+
+                        <!-- Editor -->
+                        <div id="editor"
+                             contenteditable="true"
+                             class="min-h-[200px] p-4 focus:outline-none text-sm"
+                             style="max-height: 400px; overflow-y: auto;"
+                             placeholder="Detailed description, steps to reproduce, expected vs actual behavior..."></div>
+
+                        <!-- Hidden textarea for form submission -->
+                        <textarea name="description" id="description" class="hidden"></textarea>
                     </div>
-                    <input type="hidden" id="description" name="description">
+                    <p class="text-xs text-gray-500 mt-2">Use the toolbar to format your text</p>
                 </div>
 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
                     <div>
-                        <label for="severity" class="block text-sm font-medium text-gray-700 mb-2">Severity *</label>
-                        <select id="severity" name="severity" required
-                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none">
-                            <option value="Critical" {{ 'selected' if finding and finding.severity == 'Critical' else '' }}>Critical</option>
-                            <option value="High" {{ 'selected' if finding and finding.severity == 'High' else '' }}>High</option>
-                            <option value="Medium" {{ 'selected' if (finding and finding.severity == 'Medium') or not finding else '' }}>Medium</option>
-                            <option value="Low" {{ 'selected' if finding and finding.severity == 'Low' else '' }}>Low</option>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Severity *</label>
+                        <select name="severity" required
+                                class="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent">
+                            <option value="Critical" {% if finding and finding.severity == 'Critical' %}selected{% endif %}>Critical</option>
+                            <option value="High" {% if finding and finding.severity == 'High' %}selected{% endif %}>High</option>
+                            <option value="Medium" {% if finding and finding.severity == 'Medium' %}selected{% elif not finding %}selected{% endif %}>Medium</option>
+                            <option value="Low" {% if finding and finding.severity == 'Low' %}selected{% endif %}>Low</option>
                         </select>
                     </div>
 
                     {% if finding %}
                     <div>
-                        <label for="status" class="block text-sm font-medium text-gray-700 mb-2">Status *</label>
-                        <select id="status" name="status" required
-                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none">
-                            <option value="Open" {{ 'selected' if finding.status == 'Open' else '' }}>Open</option>
-                            <option value="In Progress" {{ 'selected' if finding.status == 'In Progress' else '' }}>In Progress</option>
-                            <option value="Resolved" {{ 'selected' if finding.status == 'Resolved' else '' }}>Resolved</option>
-                            <option value="Closed" {{ 'selected' if finding.status == 'Closed' else '' }}>Closed</option>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Status</label>
+                        <select name="status"
+                                class="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent">
+                            <option value="Open" {% if finding.status == 'Open' %}selected{% endif %}>Open</option>
+                            <option value="In Progress" {% if finding.status == 'In Progress' %}selected{% endif %}>In Progress</option>
+                            <option value="Resolved" {% if finding.status == 'Resolved' %}selected{% endif %}>Resolved</option>
+                            <option value="Closed" {% if finding.status == 'Closed' %}selected{% endif %}>Closed</option>
                         </select>
                     </div>
                     {% endif %}
                 </div>
 
                 <div>
-                    <label for="category_id" class="block text-sm font-medium text-gray-700 mb-2">Category</label>
-                    <select id="category_id" name="category_id"
-                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Category</label>
+                    <select name="category_id"
+                            class="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent">
                         <option value="">No Category</option>
                         {% for category in categories %}
-                            <option value="{{ category.id }}" {{ 'selected' if finding and finding.category_id == category.id else '' }}>
-                                {{ category.name }}
-                            </option>
+                        <option value="{{ category.id }}" {% if finding and finding.category_id == category.id %}selected{% endif %}>
+                            {{ category.name }}
+                        </option>
                         {% endfor %}
                     </select>
                 </div>
 
                 {% if finding and finding.screenshots %}
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Current Screenshots</label>
-                    <p class="text-sm text-gray-600 mb-3">Select the screenshots you want to keep. Unchecked screenshots will be deleted when you save.</p>
-                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Existing Screenshots</label>
+                    <div class="grid grid-cols-3 gap-3">
                         {% for screenshot in finding.screenshots %}
-                        <div class="relative group border-2 rounded-lg overflow-hidden screenshot-container" id="screenshot-{{ screenshot.id }}">
-                            <input type="checkbox" name="keep_screenshots" value="{{ screenshot.id }}"
-                                   id="keep-{{ screenshot.id }}"
-                                   class="absolute top-2 left-2 w-5 h-5 z-10 cursor-pointer"
-                                   checked>
-                            <label for="keep-{{ screenshot.id }}" class="cursor-pointer block">
-                                <img src="/{{ screenshot.filepath }}" alt="Screenshot" class="w-full h-32 object-cover">
-                                <div class="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center">
-                                    <p class="text-white text-xs text-center px-2">{{ screenshot.filename }}</p>
-                                    <p class="text-white text-xs mt-1">Click to toggle</p>
-                                </div>
+                        <div class="relative group">
+                            <img src="{{ url_for('static', filename='uploads/' + screenshot.filename) }}"
+                                 alt="Screenshot"
+                                 class="w-full h-32 object-cover rounded-lg border border-gray-200">
+                            <label class="absolute top-2 right-2">
+                                <input type="checkbox" name="keep_screenshots" value="{{ screenshot.id }}" checked
+                                       class="w-5 h-5 text-green-600 border-gray-300 rounded focus:ring-green-500">
                             </label>
-                            <div class="screenshot-overlay absolute inset-0 bg-red-500 bg-opacity-50 hidden items-center justify-center">
-                                <div class="text-white text-center">
-                                    <i class="fas fa-trash-alt text-2xl mb-1"></i>
-                                    <p class="text-xs font-semibold">Will be deleted</p>
-                                </div>
-                            </div>
                         </div>
                         {% endfor %}
                     </div>
+                    <p class="text-xs text-gray-500 mt-2">Uncheck to remove screenshots</p>
                 </div>
                 {% endif %}
 
                 <div>
-                    <label for="screenshots" class="block text-sm font-medium text-gray-700 mb-2">
-                        {% if finding %}Add New Screenshots{% else %}Screenshots{% endif %}
-                    </label>
-                    <input type="file" id="screenshots" name="screenshots" multiple accept="image/*"
-                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none">
-                    <p class="text-sm text-gray-500 mt-2">You can select multiple images</p>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Screenshots</label>
+                    <div class="border-2 border-dashed border-gray-200 rounded-lg p-6 text-center hover:border-green-500 transition">
+                        <svg class="w-10 h-10 mx-auto text-gray-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                        </svg>
+                        <input type="file" name="screenshots" multiple accept="image/*"
+                               class="hidden" id="screenshots"
+                               onchange="displayFileNames(this)">
+                        <label for="screenshots" class="cursor-pointer">
+                            <span class="text-sm text-green-600 font-medium hover:text-green-700">Upload screenshots</span>
+                            <p class="text-xs text-gray-500 mt-1">or drag and drop</p>
+                        </label>
+                        <div id="fileNames" class="mt-3 text-xs text-gray-600"></div>
+                    </div>
                 </div>
 
-                <div class="flex items-center space-x-4">
-                    <button type="submit" class="bg-red-600 text-white px-6 py-2 rounded-lg hover:bg-red-700 transition">
-                        <i class="fas fa-save mr-2"></i>{{ 'Update' if finding else 'Create' }} Finding
-                    </button>
-                    <a href="{{ url_for('finding_detail', finding_id=finding.id) if finding else url_for('session_detail', session_id=testing_session.id) }}"
-                       class="bg-gray-200 text-gray-700 px-6 py-2 rounded-lg hover:bg-gray-300 transition">
+                <div class="flex justify-end space-x-3 pt-4 border-t">
+                    <a href="{{ url_for('session_detail', session_id=testing_session.id) if not finding else url_for('finding_detail', finding_id=finding.id) }}"
+                       class="px-5 py-2.5 border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50">
                         Cancel
                     </a>
-                    {% if finding %}
-                    <button type="button" onclick="confirmDelete()"
-                            class="bg-red-800 text-white px-6 py-2 rounded-lg hover:bg-red-900 transition ml-auto">
-                        <i class="fas fa-trash mr-2"></i>Delete Finding
+                    <button type="submit" class="btn-primary text-white px-5 py-2.5 rounded-lg text-sm font-medium">
+                        {% if finding %}Update{% else %}Create{% endif %} Finding
                     </button>
-                    {% endif %}
                 </div>
             </div>
         </form>
-
-        {% if finding %}
-        <form id="deleteForm" method="POST" action="{{ url_for('delete_finding', finding_id=finding.id) }}"></form>
-        {% endif %}
     </div>
 </div>
 
 <style>
-#editor[contenteditable]:empty::before {
+#editor[contenteditable]:empty:before {
     content: attr(placeholder);
     color: #9CA3AF;
     pointer-events: none;
 }
 
-#editor h1 { font-size: 2em; font-weight: bold; margin: 0.67em 0; }
-#editor h2 { font-size: 1.5em; font-weight: bold; margin: 0.75em 0; }
-#editor h3 { font-size: 1.17em; font-weight: bold; margin: 0.83em 0; }
-#editor p { margin: 1em 0; }
-#editor ul, #editor ol { margin: 1em 0; padding-left: 2em; }
-#editor ul { list-style-type: disc; }
-#editor ol { list-style-type: decimal; }
-
-.screenshot-container.will-delete {
-    border-color: #ef4444;
+#editor h3 {
+    font-size: 1.125rem;
+    font-weight: 600;
+    margin: 1rem 0 0.5rem 0;
+    color: #1F2937;
 }
 
-.screenshot-container.will-keep {
-    border-color: #d1d5db;
+#editor ul, #editor ol {
+    margin: 0.5rem 0;
+    padding-left: 2rem;
+}
+
+#editor ul {
+    list-style-type: disc;
+}
+
+#editor ol {
+    list-style-type: decimal;
+}
+
+#editor li {
+    margin: 0.25rem 0;
+}
+
+#editor code {
+    background-color: #F3F4F6;
+    padding: 0.125rem 0.375rem;
+    border-radius: 0.25rem;
+    font-family: monospace;
+    font-size: 0.875em;
+}
+
+#editor pre {
+    background-color: #F3F4F6;
+    padding: 1rem;
+    border-radius: 0.5rem;
+    overflow-x: auto;
+    margin: 1rem 0;
+}
+
+#editor pre code {
+    background: none;
+    padding: 0;
+}
+
+#editor strong {
+    font-weight: 600;
+}
+
+#editor em {
+    font-style: italic;
+}
+
+#editor u {
+    text-decoration: underline;
+}
+
+#editor p {
+    margin: 0.5rem 0;
+}
+
+/* Remove default browser paragraph margins when empty */
+#editor p:empty {
+    margin: 0;
 }
 </style>
 
 <script>
-function formatDoc(cmd, value = null) {
-    document.execCommand(cmd, false, value);
+function formatText(command, value = null) {
+    document.execCommand(command, false, value);
     document.getElementById('editor').focus();
 }
 
-function confirmDelete() {
-    if (confirm('Are you sure you want to delete this finding?')) {
-        document.getElementById('deleteForm').submit();
-    }
-}
+function insertCode() {
+    const selection = window.getSelection();
+    const text = selection.toString();
 
-document.querySelector('form').addEventListener('submit', function(e) {
-    const editorContent = document.getElementById('editor').innerHTML;
-    document.getElementById('description').value = editorContent;
-});
-
-document.getElementById('editor').addEventListener('input', function() {
-    document.getElementById('description').value = this.innerHTML;
-});
-
-function updateScreenshotUI(checkbox) {
-    const container = checkbox.closest('.screenshot-container');
-    const overlay = container.querySelector('.screenshot-overlay');
-
-    if (checkbox.checked) {
-        container.classList.remove('will-delete');
-        container.classList.add('will-keep');
-        overlay.classList.add('hidden');
-        overlay.classList.remove('flex');
+    if (text) {
+        document.execCommand('insertHTML', false, `<code>${text}</code>`);
     } else {
-        container.classList.remove('will-keep');
-        container.classList.add('will-delete');
-        overlay.classList.remove('hidden');
-        overlay.classList.add('flex');
+        document.execCommand('insertHTML', false, '<pre><code>// Your code here</code></pre>');
     }
+    document.getElementById('editor').focus();
 }
 
-document.addEventListener('DOMContentLoaded', function() {
-    document.querySelectorAll('input[name="keep_screenshots"]').forEach(checkbox => {
-        updateScreenshotUI(checkbox);
+function displayFileNames(input) {
+    const fileNames = Array.from(input.files).map(f => f.name).join(', ');
+    document.getElementById('fileNames').textContent = fileNames || '';
+}
 
-        checkbox.addEventListener('change', function() {
-            updateScreenshotUI(this);
-        });
+// Helper function to convert HTML to plain text
+function htmlToPlainText(html) {
+    const temp = document.createElement('div');
+    temp.innerHTML = html;
+
+    // Replace <br> and closing block elements with newlines
+    const brElements = temp.querySelectorAll('br');
+    brElements.forEach(br => br.replaceWith('\n'));
+
+    const blockElements = temp.querySelectorAll('div, p, h1, h2, h3, h4, h5, h6, li');
+    blockElements.forEach(el => {
+        el.insertAdjacentText('afterend', '\n');
+    });
+
+    return temp.textContent || temp.innerText || '';
+}
+
+// Initialize editor with existing content
+window.addEventListener('DOMContentLoaded', function() {
+    const editor = document.getElementById('editor');
+
+    {% if finding and finding.description %}
+    // If editing, load the HTML content
+    editor.innerHTML = {{ finding.description|tojson }};
+    {% endif %}
+
+    // Remove error styling when user starts typing
+    editor.addEventListener('input', function() {
+        editor.style.border = '';
+        const errorMsg = document.getElementById('editorError');
+        if (errorMsg) errorMsg.remove();
     });
 });
 
-document.querySelectorAll('#toolbar button').forEach(button => {
-    button.addEventListener('click', function(e) {
+// Sync editor content to hidden textarea before form submission
+document.querySelector('form').addEventListener('submit', function(e) {
+    const editor = document.getElementById('editor');
+    const description = document.getElementById('description');
+
+    // Get the content
+    const editorContent = editor.innerHTML.trim();
+    const textContent = editor.innerText.trim();
+
+    // Check if editor is empty
+    if (!textContent || textContent === '') {
         e.preventDefault();
-    });
+        editor.focus();
+        editor.style.border = '2px solid #ef4444';
+
+        // Show error message
+        let errorMsg = document.getElementById('editorError');
+        if (!errorMsg) {
+            errorMsg = document.createElement('p');
+            errorMsg.id = 'editorError';
+            errorMsg.className = 'text-xs text-red-600 mt-2';
+            errorMsg.textContent = 'Description is required';
+            editor.parentElement.parentElement.appendChild(errorMsg);
+        }
+        return false;
+    }
+
+    // Remove error styling if present
+    editor.style.border = '';
+    const errorMsg = document.getElementById('editorError');
+    if (errorMsg) errorMsg.remove();
+
+    // Clean up the HTML content
+    let cleanedContent = editorContent;
+
+    // Remove empty paragraphs and normalize spacing
+    cleanedContent = cleanedContent.replace(/<p><br><\/p>/g, '<br>');
+    cleanedContent = cleanedContent.replace(/<p>\s*<\/p>/g, '');
+    cleanedContent = cleanedContent.replace(/<div><br><\/div>/g, '<br>');
+    cleanedContent = cleanedContent.replace(/<div>\s*<\/div>/g, '');
+
+    // Set the cleaned value
+    description.value = cleanedContent;
 });
 </script>
 {% endblock %}
