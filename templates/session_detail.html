@@ -22,7 +22,7 @@
                 </span>
             </div>
             {% if testing_session.description %}
-            <div class="text-sm text-gray-700 prose prose-sm max-w-none">
+            <div class="text-sm text-gray-700 prose prose-sm max-w-none mt-2">
                 {{ testing_session.description|safe }}
             </div>
             {% else %}
@@ -296,8 +296,31 @@
     margin: 0.125rem 0;
 }
 
+.prose code {
+    background-color: #F3F4F6;
+    padding: 0.125rem 0.375rem;
+    border-radius: 0.25rem;
+    font-family: monospace;
+    font-size: 0.875em;
+    color: #1F2937;
+}
+
+.prose pre {
+    background-color: #F3F4F6;
+    padding: 1rem;
+    border-radius: 0.5rem;
+    overflow-x: auto;
+    margin: 0.5rem 0;
+}
+
+.prose pre code {
+    background: none;
+    padding: 0;
+}
+
 .prose strong {
     font-weight: 600;
+    color: #1F2937;
 }
 
 .prose em {
@@ -310,6 +333,10 @@
 
 .prose p {
     margin: 0.25rem 0;
+}
+
+.prose p:empty {
+    margin: 0;
 }
 
 /* Ensure table columns don't overflow */

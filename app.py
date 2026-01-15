@@ -1002,6 +1002,31 @@ def inject_seo_defaults():
     )
 
 
+# Add these routes to your app.py
+
+# Delete Testing Session
+@app.route('/session/<int:session_id>/delete', methods=['POST'])
+@login_required
+def delete_session(session_id):
+    testing_session = TestingSession.query.get_or_404(session_id)
+    project_id = testing_session.project_id
+
+    # Delete associated findings and their screenshots
+    for finding in testing_session.findings:
+        for screenshot in finding.screenshots:
+            if os.path.exists(screenshot.filepath):
+                try:
+                    os.remove(screenshot.filepath)
+                except Exception as e:
+                    print(f"Error deleting screenshot file: {e}")
+
+    db.session.delete(testing_session)
+    db.session.commit()
+    flash('Testing session deleted successfully!', 'success')
+    return redirect(url_for('project_detail', project_id=project_id))
+
+
+
 # UPDATED INITIALIZATION FUNCTION
 # ============================================
 # Replace your seed_admin_user() function with this init_db() function:
@@ -1024,6 +1049,7 @@ def init_db():
 
         print(f"Database location: {os.path.join(BASE_DIR, 'zearom_qa.db')}")
         print(f"Upload folder: {app.config['UPLOAD_FOLDER']}")
+
 
 
 # UPDATE THE MAIN BLOCK
