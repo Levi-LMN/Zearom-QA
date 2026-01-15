@@ -32,12 +32,34 @@
                     {{ finding.status }}
                 </span>
             </div>
-            {% if finding.category %}
-            <div class="inline-flex items-center px-3 py-1 rounded-lg text-sm" style="background-color: {{ finding.category.color }}15; color: {{ finding.category.color }};">
-                <span class="w-2 h-2 rounded-full mr-2" style="background-color: {{ finding.category.color }};"></span>
-                {{ finding.category.name }}
+
+            <!-- Category, Module & Submodule Tags -->
+            <div class="flex flex-wrap gap-2 mt-3">
+                {% if finding.category %}
+                <div class="inline-flex items-center px-3 py-1 rounded-lg text-sm" style="background-color: {{ finding.category.color }}15; color: {{ finding.category.color }};">
+                    <span class="w-2 h-2 rounded-full mr-2" style="background-color: {{ finding.category.color }};"></span>
+                    {{ finding.category.name }}
+                </div>
+                {% endif %}
+
+                {% if finding.module %}
+                <div class="inline-flex items-center px-3 py-1 rounded-lg text-sm" style="background-color: {{ finding.module.color }}15; color: {{ finding.module.color }};">
+                    <svg class="w-3 h-3 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+                    </svg>
+                    {{ finding.module.name }}
+                </div>
+                {% endif %}
+
+                {% if finding.submodule %}
+                <div class="inline-flex items-center px-3 py-1 rounded-lg text-sm bg-purple-50 text-purple-700 border border-purple-200">
+                    <svg class="w-3 h-3 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/>
+                    </svg>
+                    {{ finding.submodule.name }}
+                </div>
+                {% endif %}
             </div>
-            {% endif %}
         </div>
         <div class="flex space-x-3">
             <a href="{{ url_for('edit_finding', finding_id=finding.id) }}" class="text-gray-700 bg-white border border-gray-200 px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-gray-50">
@@ -105,6 +127,40 @@
                     <p class="text-xs text-gray-500 mb-1">Last Updated</p>
                     <p class="text-sm font-medium text-gray-900">{{ finding.updated_at.strftime('%b %d, %Y at %I:%M %p') }}</p>
                 </div>
+
+                {% if finding.category %}
+                <div class="pt-3 border-t border-gray-200">
+                    <p class="text-xs text-gray-500 mb-1">Category</p>
+                    <div class="inline-flex items-center px-2.5 py-1 rounded-lg text-sm" style="background-color: {{ finding.category.color }}15; color: {{ finding.category.color }};">
+                        <span class="w-2 h-2 rounded-full mr-2" style="background-color: {{ finding.category.color }};"></span>
+                        {{ finding.category.name }}
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if finding.module %}
+                <div class="pt-3 border-t border-gray-200">
+                    <p class="text-xs text-gray-500 mb-1">Module</p>
+                    <a href="{{ url_for('module_detail', module_id=finding.module.id) }}" class="inline-flex items-center px-2.5 py-1 rounded-lg text-sm hover:opacity-80 transition" style="background-color: {{ finding.module.color }}15; color: {{ finding.module.color }};">
+                        <svg class="w-3 h-3 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+                        </svg>
+                        {{ finding.module.name }}
+                    </a>
+                </div>
+                {% endif %}
+
+                {% if finding.submodule %}
+                <div class="pt-3 border-t border-gray-200">
+                    <p class="text-xs text-gray-500 mb-1">Submodule</p>
+                    <div class="inline-flex items-center px-2.5 py-1 rounded-lg text-sm bg-purple-50 text-purple-700 border border-purple-200">
+                        <svg class="w-3 h-3 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/>
+                        </svg>
+                        {{ finding.submodule.name }}
+                    </div>
+                </div>
+                {% endif %}
             </div>
         </div>
 

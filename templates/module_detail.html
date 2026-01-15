@@ -1,0 +1,154 @@
+{% extends "base.html" %}
+
+{% block title %}{{ module.name }} - Zearom QA{% endblock %}
+
+{% block content %}
+<!-- Page Header -->
+<div class="mb-6">
+    <nav class="flex items-center space-x-2 text-sm mb-4">
+        <a href="{{ url_for('projects') }}" class="text-gray-500 hover:text-gray-700">Projects</a>
+        <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+        </svg>
+        <a href="{{ url_for('project_detail', project_id=module.project_id) }}" class="text-gray-500 hover:text-gray-700">{{ module.project.name }}</a>
+        <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+        </svg>
+        <span class="text-gray-900 font-medium">{{ module.name }}</span>
+    </nav>
+
+    <div class="flex items-start justify-between">
+        <div class="flex-1">
+            <div class="flex items-center space-x-3 mb-2">
+                <h1 class="text-gray-900">{{ module.name }}</h1>
+                <span class="inline-flex items-center px-3 py-1 rounded-lg text-sm font-medium" style="background-color: {{ module.color }}15; color: {{ module.color }};">
+                    <span class="w-2 h-2 rounded-full mr-2" style="background-color: {{ module.color }};"></span>
+                    Module
+                </span>
+            </div>
+            <p class="text-sm text-gray-500">{{ module.description or 'No description' }}</p>
+        </div>
+        <div class="flex space-x-3">
+            <a href="{{ url_for('edit_module', module_id=module.id) }}" class="text-gray-700 bg-white border border-gray-200 px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-gray-50">
+                Edit Module
+            </a>
+            <a href="{{ url_for('new_submodule', module_id=module.id) }}" class="btn-primary text-white px-5 py-2.5 rounded-lg text-sm font-medium flex items-center">
+                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                </svg>
+                Add Submodule
+            </a>
+            <form method="POST" action="{{ url_for('delete_module', module_id=module.id) }}" onsubmit="return confirm('Are you sure? This will also delete all submodules.');">
+                <button type="submit" class="text-red-700 bg-red-50 border border-red-200 px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-red-100">
+                    Delete
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Stats -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-5 mb-6">
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+        <h4 class="text-sm text-gray-600 mb-2">Total Submodules</h4>
+        <p class="text-3xl font-bold text-gray-900">{{ submodules|length }}</p>
+    </div>
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+        <h4 class="text-sm text-gray-600 mb-2">Module Findings</h4>
+        <p class="text-3xl font-bold" style="color: {{ module.color }};">{{ module.findings|length }}</p>
+    </div>
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+        <h4 class="text-sm text-gray-600 mb-2">Created</h4>
+        <p class="text-lg font-semibold text-gray-900">{{ module.created_at.strftime('%b %d, %Y') }}</p>
+    </div>
+</div>
+
+<!-- Submodules -->
+<div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+    <h2 class="font-semibold text-gray-900 mb-5">Submodules ({{ submodules|length }})</h2>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {% for submodule in submodules %}
+        <div class="border border-gray-200 rounded-xl p-4 hover:border-purple-300 hover:bg-purple-50 transition group">
+            <div class="flex items-start justify-between mb-3">
+                <div class="flex-1">
+                    <h3 class="font-medium text-gray-900 mb-1">{{ submodule.name }}</h3>
+                    <p class="text-xs text-gray-500 line-clamp-2">{{ submodule.description or 'No description' }}</p>
+                </div>
+                <div class="flex space-x-1 ml-2">
+                    <a href="{{ url_for('edit_submodule', submodule_id=submodule.id) }}" class="p-1.5 hover:bg-gray-200 rounded transition opacity-0 group-hover:opacity-100">
+                        <svg class="w-3.5 h-3.5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                        </svg>
+                    </a>
+                    <form method="POST" action="{{ url_for('delete_submodule', submodule_id=submodule.id) }}" onsubmit="return confirm('Are you sure?');" class="inline">
+                        <button type="submit" class="p-1.5 hover:bg-red-100 rounded transition opacity-0 group-hover:opacity-100">
+                            <svg class="w-3.5 h-3.5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                            </svg>
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <div class="flex items-center justify-between pt-3 border-t border-gray-100">
+                <span class="text-xs text-gray-500">
+                    <span class="font-medium text-gray-700">{{ submodule.findings|length }}</span> findings
+                </span>
+                <span class="text-xs text-gray-400">{{ submodule.created_at.strftime('%b %d') }}</span>
+            </div>
+        </div>
+        {% else %}
+        <div class="col-span-full text-center py-12">
+            <svg class="w-16 h-16 mx-auto text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+            </svg>
+            <p class="text-sm text-gray-500 mb-4">No submodules yet</p>
+            <a href="{{ url_for('new_submodule', module_id=module.id) }}" class="inline-flex items-center text-sm text-green-600 hover:text-green-700 font-medium">
+                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                </svg>
+                Create your first submodule
+            </a>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Recent Findings -->
+{% if module.findings %}
+<div class="mt-6 bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+    <h2 class="font-semibold text-gray-900 mb-5">Recent Findings ({{ module.findings|length }})</h2>
+    
+    <div class="space-y-3">
+        {% for finding in module.findings[:10] %}
+        <a href="{{ url_for('finding_detail', finding_id=finding.id) }}" class="block p-3 border border-gray-100 rounded-lg hover:border-green-200 hover:bg-green-50 transition">
+            <div class="flex items-start justify-between mb-2">
+                <h4 class="font-medium text-sm text-gray-900 line-clamp-1 flex-1">{{ finding.title }}</h4>
+                <div class="flex items-center space-x-2 ml-3">
+                    <span class="badge {% if finding.severity == 'Critical' %}bg-red-100 text-red-700{% elif finding.severity == 'High' %}bg-orange-100 text-orange-700{% elif finding.severity == 'Medium' %}bg-yellow-100 text-yellow-700{% else %}bg-blue-100 text-blue-700{% endif %}">
+                        {{ finding.severity }}
+                    </span>
+                    <span class="badge {% if finding.status == 'Open' %}bg-red-100 text-red-700{% elif finding.status == 'In Progress' %}bg-blue-100 text-blue-700{% elif finding.status == 'Resolved' %}bg-green-100 text-green-700{% else %}bg-gray-100 text-gray-700{% endif %}">
+                        {{ finding.status }}
+                    </span>
+                </div>
+            </div>
+            <div class="flex items-center space-x-3 text-xs text-gray-500">
+                {% if finding.submodule %}
+                <span class="inline-flex items-center">
+                    <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+                    </svg>
+                    {{ finding.submodule.name }}
+                </span>
+                {% endif %}
+                <span>•</span>
+                <span>{{ finding.created_at.strftime('%b %d, %Y') }}</span>
+            </div>
+        </a>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+{% endblock %}

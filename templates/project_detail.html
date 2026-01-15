@@ -22,6 +22,9 @@
             <a href="{{ url_for('new_category', project_id=project.id) }}" class="text-gray-700 bg-white border border-gray-200 px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-gray-50">
                 Add Category
             </a>
+            <a href="{{ url_for('new_module', project_id=project.id) }}" class="text-purple-700 bg-purple-50 border border-purple-200 px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-purple-100">
+                Add Module
+            </a>
             <a href="{{ url_for('new_session', project_id=project.id) }}" class="btn-primary text-white px-5 py-2.5 rounded-lg text-sm font-medium flex items-center">
                 <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
@@ -32,20 +35,60 @@
     </div>
 </div>
 
-<!-- Categories -->
-{% if categories %}
-<div class="mb-6">
-    <h3 class="text-sm font-semibold text-gray-700 mb-3">Categories</h3>
-    <div class="flex flex-wrap gap-2">
-        {% for category in categories %}
-        <div class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm" style="background-color: {{ category.color }}15; color: {{ category.color }};">
-            <span class="w-2 h-2 rounded-full mr-2" style="background-color: {{ category.color }};"></span>
-            {{ category.name }}
+<!-- Categories & Modules -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+    <!-- Categories -->
+    <div>
+        <div class="flex items-center justify-between mb-3">
+            <h3 class="text-sm font-semibold text-gray-700">Categories</h3>
+            {% if categories %}
+            <span class="text-xs text-gray-500">{{ categories|length }} total</span>
+            {% endif %}
         </div>
-        {% endfor %}
+        {% if categories %}
+        <div class="flex flex-wrap gap-2">
+            {% for category in categories %}
+            <div class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm" style="background-color: {{ category.color }}15; color: {{ category.color }};">
+                <span class="w-2 h-2 rounded-full mr-2" style="background-color: {{ category.color }};"></span>
+                {{ category.name }}
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p class="text-sm text-gray-400 italic">No categories yet</p>
+        {% endif %}
+    </div>
+
+    <!-- Modules -->
+    <div>
+        <div class="flex items-center justify-between mb-3">
+            <h3 class="text-sm font-semibold text-gray-700">Modules</h3>
+            {% if modules %}
+            <span class="text-xs text-gray-500">{{ modules|length }} total</span>
+            {% endif %}
+        </div>
+        {% if modules %}
+        <div class="space-y-2">
+            {% for module in modules %}
+            <a href="{{ url_for('module_detail', module_id=module.id) }}" class="flex items-center justify-between px-3 py-2 rounded-lg border border-gray-200 hover:border-purple-300 hover:bg-purple-50 transition group">
+                <div class="flex items-center">
+                    <span class="w-2 h-2 rounded-full mr-2" style="background-color: {{ module.color }};"></span>
+                    <span class="text-sm font-medium text-gray-900 group-hover:text-purple-700">{{ module.name }}</span>
+                </div>
+                <div class="flex items-center space-x-3">
+                    <span class="text-xs text-gray-500">{{ module.submodules|length }} submodules</span>
+                    <svg class="w-4 h-4 text-gray-400 group-hover:text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                    </svg>
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p class="text-sm text-gray-400 italic">No modules yet</p>
+        {% endif %}
     </div>
 </div>
-{% endif %}
 
 <!-- Testing Sessions -->
 <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">

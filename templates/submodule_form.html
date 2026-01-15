@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+
+{% block title %}{% if submodule %}Edit{% else %}New{% endif %} Submodule - Zearom QA{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto">
+    <div class="mb-6">
+        <nav class="flex items-center space-x-2 text-sm mb-4">
+            <a href="{{ url_for('project_detail', project_id=module.project_id) }}" class="text-gray-500 hover:text-gray-700">{{ module.project.name }}</a>
+            <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+            </svg>
+            <a href="{{ url_for('module_detail', module_id=module.id) }}" class="text-gray-500 hover:text-gray-700">{{ module.name }}</a>
+            <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+            </svg>
+            <span class="text-gray-900 font-medium">{% if submodule %}Edit{% else %}New{% endif %} Submodule</span>
+        </nav>
+
+        <h1 class="text-gray-900 mb-1">{% if submodule %}Edit{% else %}New{% endif %} Submodule</h1>
+        <p class="text-sm text-gray-500">{% if submodule %}Update submodule details{% else %}Create a new submodule for {{ module.name }}{% endif %}</p>
+    </div>
+
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+        <form method="POST">
+            <div class="space-y-5">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Submodule Name *</label>
+                    <input type="text" name="name" required
+                           value="{{ submodule.name if submodule else '' }}"
+                           class="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                           placeholder="e.g., Create Class, View Students, Update Profile">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Description</label>
+                    <textarea name="description" rows="4"
+                              class="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                              placeholder="Describe what this submodule does">{{ submodule.description if submodule else '' }}</textarea>
+                </div>
+
+                <div class="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                    <div class="flex items-start">
+                        <svg class="w-5 h-5 text-purple-600 mt-0.5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        <div>
+                            <h4 class="text-sm font-medium text-purple-900 mb-1">Submodule Information</h4>
+                            <p class="text-xs text-purple-700">Submodules are specific features or functionalities within a module. For example, "Create Class" and "View Students" are submodules of the "Student Module".</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex justify-end space-x-3 pt-4 border-t">
+                    <a href="{{ url_for('module_detail', module_id=module.id) }}"
+                       class="px-5 py-2.5 border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50">
+                        Cancel
+                    </a>
+                    <button type="submit" class="btn-primary text-white px-5 py-2.5 rounded-lg text-sm font-medium">
+                        {% if submodule %}Update{% else %}Create{% endif %} Submodule
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

@@ -69,6 +69,7 @@ class User(UserMixin, db.Model):
 
     projects = db.relationship('Project', backref='creator', lazy=True)
     categories = db.relationship('Category', backref='creator', lazy=True)
+    modules = db.relationship('Module', backref='creator', lazy=True)
     findings = db.relationship('Finding', foreign_keys='Finding.created_by', backref='creator', lazy=True)
     status_updates = db.relationship('Finding', foreign_keys='Finding.status_updated_by', backref='status_updater',
                                      lazy=True)
@@ -84,6 +85,7 @@ class Project(db.Model):
 
     sessions = db.relationship('TestingSession', backref='project', lazy=True, cascade='all, delete-orphan')
     categories = db.relationship('Category', backref='project', lazy=True, cascade='all, delete-orphan')
+    modules = db.relationship('Module', backref='project', lazy=True, cascade='all, delete-orphan')
 
 
 class Category(db.Model):
@@ -96,6 +98,31 @@ class Category(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     findings = db.relationship('Finding', backref='category', lazy=True)
+
+
+class Module(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    description = db.Column(db.Text)
+    color = db.Column(db.String(7), default='#8B5CF6')
+    project_id = db.Column(db.Integer, db.ForeignKey('project.id'), nullable=False)
+    created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    submodules = db.relationship('Submodule', backref='module', lazy=True, cascade='all, delete-orphan')
+    findings = db.relationship('Finding', backref='module', lazy=True)
+
+
+class Submodule(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    description = db.Column(db.Text)
+    module_id = db.Column(db.Integer, db.ForeignKey('module.id'), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    findings = db.relationship('Finding', backref='submodule', lazy=True)
 
 
 class TestingSession(db.Model):
@@ -118,6 +145,8 @@ class Finding(db.Model):
     status = db.Column(db.String(50), default='Open')
     session_id = db.Column(db.Integer, db.ForeignKey('testing_session.id'), nullable=False)
     category_id = db.Column(db.Integer, db.ForeignKey('category.id'))
+    module_id = db.Column(db.Integer, db.ForeignKey('module.id'))
+    submodule_id = db.Column(db.Integer, db.ForeignKey('submodule.id'))
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     status_updated_by = db.Column(db.Integer, db.ForeignKey('user.id'))
     status_updated_at = db.Column(db.DateTime)
@@ -379,10 +408,13 @@ def project_detail(project_id):
         .paginate(page=page, per_page=per_page, error_out=False)
 
     categories = Category.query.filter_by(project_id=project_id).all()
+    modules = Module.query.filter_by(project_id=project_id).all()
+
     return render_template('project_detail.html',
                            project=project,
                            sessions_pagination=sessions_pagination,
-                           categories=categories)
+                           categories=categories,
+                           modules=modules)
 
 
 @app.route('/project/<int:project_id>/edit', methods=['GET', 'POST'])
@@ -438,6 +470,130 @@ def new_category(project_id):
     return render_template('category_form.html', project=project)
 
 
+@app.route('/project/<int:project_id>/module/new', methods=['GET', 'POST'])
+@login_required
+def new_module(project_id):
+    project = Project.query.get_or_404(project_id)
+
+    if request.method == 'POST':
+        name = request.form.get('name')
+        description = request.form.get('description')
+        color = request.form.get('color', '#8B5CF6')
+
+        module = Module(
+            name=name,
+            description=description,
+            color=color,
+            project_id=project_id,
+            created_by=current_user.id
+        )
+        db.session.add(module)
+        db.session.commit()
+
+        flash('Module created successfully!', 'success')
+        return redirect(url_for('project_detail', project_id=project_id))
+
+    return render_template('module_form.html', project=project)
+
+
+@app.route('/module/<int:module_id>')
+@login_required
+def module_detail(module_id):
+    module = Module.query.get_or_404(module_id)
+    submodules = Submodule.query.filter_by(module_id=module_id).order_by(Submodule.created_at.desc()).all()
+    return render_template('module_detail.html', module=module, submodules=submodules)
+
+
+@app.route('/module/<int:module_id>/edit', methods=['GET', 'POST'])
+@login_required
+def edit_module(module_id):
+    module = Module.query.get_or_404(module_id)
+
+    if request.method == 'POST':
+        module.name = request.form.get('name')
+        module.description = request.form.get('description')
+        module.color = request.form.get('color', '#8B5CF6')
+        module.updated_at = datetime.utcnow()
+        db.session.commit()
+
+        flash('Module updated successfully!', 'success')
+        return redirect(url_for('module_detail', module_id=module_id))
+
+    return render_template('module_form.html', module=module, project=module.project)
+
+
+@app.route('/module/<int:module_id>/delete', methods=['POST'])
+@login_required
+def delete_module(module_id):
+    module = Module.query.get_or_404(module_id)
+    project_id = module.project_id
+    db.session.delete(module)
+    db.session.commit()
+    flash('Module deleted successfully!', 'success')
+    return redirect(url_for('project_detail', project_id=project_id))
+
+
+@app.route('/module/<int:module_id>/submodule/new', methods=['GET', 'POST'])
+@login_required
+def new_submodule(module_id):
+    module = Module.query.get_or_404(module_id)
+
+    if request.method == 'POST':
+        name = request.form.get('name')
+        description = request.form.get('description')
+
+        submodule = Submodule(
+            name=name,
+            description=description,
+            module_id=module_id
+        )
+        db.session.add(submodule)
+        db.session.commit()
+
+        flash('Submodule created successfully!', 'success')
+        return redirect(url_for('module_detail', module_id=module_id))
+
+    return render_template('submodule_form.html', module=module)
+
+
+@app.route('/submodule/<int:submodule_id>/edit', methods=['GET', 'POST'])
+@login_required
+def edit_submodule(submodule_id):
+    submodule = Submodule.query.get_or_404(submodule_id)
+
+    if request.method == 'POST':
+        submodule.name = request.form.get('name')
+        submodule.description = request.form.get('description')
+        submodule.updated_at = datetime.utcnow()
+        db.session.commit()
+
+        flash('Submodule updated successfully!', 'success')
+        return redirect(url_for('module_detail', module_id=submodule.module_id))
+
+    return render_template('submodule_form.html', submodule=submodule, module=submodule.module)
+
+
+@app.route('/submodule/<int:submodule_id>/delete', methods=['POST'])
+@login_required
+def delete_submodule(submodule_id):
+    submodule = Submodule.query.get_or_404(submodule_id)
+    module_id = submodule.module_id
+    db.session.delete(submodule)
+    db.session.commit()
+    flash('Submodule deleted successfully!', 'success')
+    return redirect(url_for('module_detail', module_id=module_id))
+
+
+@app.route('/api/module/<int:module_id>/submodules')
+@login_required
+def get_submodules(module_id):
+    submodules = Submodule.query.filter_by(module_id=module_id).all()
+    return jsonify([{
+        'id': s.id,
+        'name': s.name
+    } for s in submodules])
+
+
 @app.route('/session/new/<int:project_id>', methods=['GET', 'POST'])
 @login_required
 def new_session(project_id):
@@ -466,6 +622,7 @@ def new_session(project_id):
 def session_detail(session_id):
     testing_session = TestingSession.query.get_or_404(session_id)
     categories = Category.query.filter_by(project_id=testing_session.project_id).all()
+    modules = Module.query.filter_by(project_id=testing_session.project_id).all()
 
     search_query = request.args.get('search', '').strip()
     findings_query = Finding.query.filter_by(session_id=session_id)
@@ -490,6 +647,7 @@ def session_detail(session_id):
                            findings_pagination=findings_pagination,
                            all_findings=all_findings,
                            categories=categories,
+                           modules=modules,
                            search_query=search_query)
 
 
@@ -548,18 +706,23 @@ def update_session_status(session_id):
 def new_finding(session_id):
     testing_session = TestingSession.query.get_or_404(session_id)
     categories = Category.query.filter_by(project_id=testing_session.project_id).all()
+    modules = Module.query.filter_by(project_id=testing_session.project_id).all()
 
     if request.method == 'POST':
         title = request.form.get('title')
         description = request.form.get('description')
         severity = request.form.get('severity')
         category_id = request.form.get('category_id')
+        module_id = request.form.get('module_id')
+        submodule_id = request.form.get('submodule_id')
 
         finding = Finding(
             title=title,
             description=description,
             severity=severity,
             category_id=category_id if category_id else None,
+            module_id=module_id if module_id else None,
+            submodule_id=submodule_id if submodule_id else None,
             session_id=session_id,
             created_by=current_user.id
         )
@@ -583,12 +746,15 @@ def new_finding(session_id):
                     )
                     db.session.add(screenshot)
 
-            db.session.commit()
-
+        db.session.commit()
         flash('Finding created successfully!', 'success')
-        return redirect(url_for('session_detail', session_id=session_id))
+        return redirect(url_for('finding_detail', finding_id=finding.id))
 
-    return render_template('finding_form.html', testing_session=testing_session, categories=categories)
+    return render_template('finding_form.html',
+                         testing_session=testing_session,
+                         categories=categories,
+                         modules=modules,
+                         finding=None)
 
 
 @app.route('/finding/<int:finding_id>')
@@ -602,27 +768,30 @@ def finding_detail(finding_id):
 @login_required
 def edit_finding(finding_id):
     finding = Finding.query.get_or_404(finding_id)
-    categories = Category.query.filter_by(project_id=finding.session.project_id).all()
+    testing_session = finding.session
+    categories = Category.query.filter_by(project_id=testing_session.project_id).all()
+    modules = Module.query.filter_by(project_id=testing_session.project_id).all()
 
     if request.method == 'POST':
         finding.title = request.form.get('title')
         finding.description = request.form.get('description')
         finding.severity = request.form.get('severity')
         finding.status = request.form.get('status')
-        category_id = request.form.get('category_id')
-        finding.category_id = category_id if category_id else None
+        finding.category_id = request.form.get('category_id') if request.form.get('category_id') else None
+        finding.module_id = request.form.get('module_id') if request.form.get('module_id') else None
+        finding.submodule_id = request.form.get('submodule_id') if request.form.get('submodule_id') else None
         finding.updated_at = datetime.utcnow()
 
-        screenshots_to_keep = request.form.getlist('keep_screenshots')
-        for screenshot in finding.screenshots:
-            if str(screenshot.id) not in screenshots_to_keep:
-                try:
-                    if os.path.exists(screenshot.filepath):
-                        os.remove(screenshot.filepath)
-                except:
-                    pass
+        # Handle screenshot deletion
+        keep_screenshots = request.form.getlist('keep_screenshots')
+        for screenshot in finding.screenshots[:]:
+            if str(screenshot.id) not in keep_screenshots:
+                # Delete file from filesystem
+                if os.path.exists(screenshot.filepath):
+                    os.remove(screenshot.filepath)
                 db.session.delete(screenshot)
 
+        # Handle new screenshots
         if 'screenshots' in request.files:
             files = request.files.getlist('screenshots')
             for file in files:
@@ -642,9 +811,13 @@ def edit_finding(finding_id):
 
         db.session.commit()
         flash('Finding updated successfully!', 'success')
-        return redirect(url_for('finding_detail', finding_id=finding_id))
+        return redirect(url_for('finding_detail', finding_id=finding.id))
 
-    return render_template('finding_form.html', finding=finding, categories=categories, testing_session=finding.session)
+    return render_template('finding_form.html',
+                         testing_session=testing_session,
+                         categories=categories,
+                         modules=modules,
+                         finding=finding)
 
 
 @app.route('/finding/<int:finding_id>/delete', methods=['POST'])
@@ -652,57 +825,47 @@ def edit_finding(finding_id):
 def delete_finding(finding_id):
     finding = Finding.query.get_or_404(finding_id)
     session_id = finding.session_id
+
+    # Delete associated screenshots from filesystem
+    for screenshot in finding.screenshots:
+        if os.path.exists(screenshot.filepath):
+            try:
+                os.remove(screenshot.filepath)
+            except Exception as e:
+                print(f"Error deleting screenshot file: {e}")
+
     db.session.delete(finding)
     db.session.commit()
     flash('Finding deleted successfully!', 'success')
     return redirect(url_for('session_detail', session_id=session_id))
 
 
-@app.route('/screenshot/<int:screenshot_id>/delete', methods=['POST'])
-@login_required
-def delete_screenshot(screenshot_id):
-    screenshot = Screenshot.query.get_or_404(screenshot_id)
-    finding_id = screenshot.finding_id
+def seed_admin_user():
+    """Create admin user if it doesn't exist"""
+    admin_email = 'admin@zearom.com'
+    admin = User.query.filter_by(email=admin_email).first()
 
-    try:
-        if os.path.exists(screenshot.filepath):
-            os.remove(screenshot.filepath)
-    except:
-        pass
-
-    db.session.delete(screenshot)
-    db.session.commit()
-    flash('Screenshot deleted successfully!', 'success')
-    return redirect(url_for('edit_finding', finding_id=finding_id))
-
-
-@app.route('/category/<int:category_id>/edit', methods=['GET', 'POST'])
-@login_required
-def edit_category(category_id):
-    category = Category.query.get_or_404(category_id)
-
-    if request.method == 'POST':
-        category.name = request.form.get('name')
-        category.description = request.form.get('description')
-        category.color = request.form.get('color', '#3B82F6')
+    if not admin:
+        admin = User(
+            email=admin_email,
+            password=generate_password_hash('admin123'),
+            name='Admin User',
+            is_active=True
+        )
+        db.session.add(admin)
         db.session.commit()
-
-        flash('Category updated successfully!', 'success')
-        return redirect(url_for('project_detail', project_id=category.project_id))
-
-    return render_template('category_form.html', category=category, project=category.project)
+        print(f"Admin user created: {admin_email} / admin123")
+    else:
+        print("Admin user already exists")
 
 
-@app.route('/category/<int:category_id>/delete', methods=['POST'])
-@login_required
-def delete_category(category_id):
-    category = Category.query.get_or_404(category_id)
-    project_id = category.project_id
-    db.session.delete(category)
-    db.session.commit()
-    flash('Category deleted successfully!', 'success')
-    return redirect(url_for('project_detail', project_id=project_id))
+# ============================================
+# MISSING ROUTES FROM NEW VERSION (Document 2)
+# Add these to your Document 1 code
+# ============================================
 
+# USER MANAGEMENT ROUTES
+# ============================================
 
 @app.route('/users')
 @login_required
@@ -761,6 +924,88 @@ def new_user():
     return render_template('user_form.html')
 
 
+# CATEGORY MANAGEMENT ROUTES
+# ============================================
+
+@app.route('/category/<int:category_id>/edit', methods=['GET', 'POST'])
+@login_required
+def edit_category(category_id):
+    category = Category.query.get_or_404(category_id)
+
+    if request.method == 'POST':
+        category.name = request.form.get('name')
+        category.description = request.form.get('description')
+        category.color = request.form.get('color', '#3B82F6')
+        db.session.commit()
+
+        flash('Category updated successfully!', 'success')
+        return redirect(url_for('project_detail', project_id=category.project_id))
+
+    return render_template('category_form.html', category=category, project=category.project)
+
+
+@app.route('/category/<int:category_id>/delete', methods=['POST'])
+@login_required
+def delete_category(category_id):
+    category = Category.query.get_or_404(category_id)
+    project_id = category.project_id
+    db.session.delete(category)
+    db.session.commit()
+    flash('Category deleted successfully!', 'success')
+    return redirect(url_for('project_detail', project_id=project_id))
+
+
+# SCREENSHOT MANAGEMENT ROUTE
+# ============================================
+
+@app.route('/screenshot/<int:screenshot_id>/delete', methods=['POST'])
+@login_required
+def delete_screenshot(screenshot_id):
+    screenshot = Screenshot.query.get_or_404(screenshot_id)
+    finding_id = screenshot.finding_id
+
+    try:
+        if os.path.exists(screenshot.filepath):
+            os.remove(screenshot.filepath)
+    except:
+        pass
+
+    db.session.delete(screenshot)
+    db.session.commit()
+    flash('Screenshot deleted successfully!', 'success')
+    return redirect(url_for('edit_finding', finding_id=finding_id))
+
+
+# FAVICON ROUTE
+# ============================================
+
+@app.route('/favicon.ico')
+def favicon():
+    """Serve favicon"""
+    return send_from_directory(
+        os.path.join(app.root_path, 'static', 'img'),
+        'logo.png',
+        mimetype='image/png'
+    )
+
+
+# SEO CONTEXT PROCESSOR
+# ============================================
+
+@app.context_processor
+def inject_seo_defaults():
+    """Inject default SEO values for all templates"""
+    return dict(
+        site_name='Zearom QA',
+        site_description='Comprehensive Quality Assurance management system for tracking projects, testing sessions, and findings.',
+        site_url=request.url_root.rstrip('/')
+    )
+
+
+# UPDATED INITIALIZATION FUNCTION
+# ============================================
+# Replace your seed_admin_user() function with this init_db() function:
+
 def init_db():
     with app.app_context():
         db.create_all()
@@ -780,26 +1025,10 @@ def init_db():
         print(f"Database location: {os.path.join(BASE_DIR, 'zearom_qa.db')}")
         print(f"Upload folder: {app.config['UPLOAD_FOLDER']}")
 
-@app.route('/favicon.ico')
-def favicon():
-    """Serve favicon"""
-    return send_from_directory(
-        os.path.join(app.root_path, 'static', 'img'),
-        'logo.png',
-        mimetype='image/png'
-    )
 
-
-# Add these context processors for SEO
-@app.context_processor
-def inject_seo_defaults():
-    """Inject default SEO values for all templates"""
-    return dict(
-        site_name='Zearom QA',
-        site_description='Comprehensive Quality Assurance management system for tracking projects, testing sessions, and findings.',
-        site_url=request.url_root.rstrip('/')
-    )
-
+# UPDATE THE MAIN BLOCK
+# ============================================
+# Replace your existing main block with:
 
 if __name__ == '__main__':
     init_db()

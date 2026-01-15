@@ -112,6 +112,32 @@
                     </select>
                 </div>
 
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Module</label>
+                        <select name="module_id" id="moduleSelect" onchange="loadSubmodules(this.value)"
+                                class="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent">
+                            <option value="">No Module</option>
+                            {% for module in modules %}
+                            <option value="{{ module.id }}" {% if finding and finding.module_id == module.id %}selected{% endif %}>
+                                {{ module.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Submodule</label>
+                        <select name="submodule_id" id="submoduleSelect"
+                                class="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent">
+                            <option value="">No Submodule</option>
+                            {% if finding and finding.submodule %}
+                            <option value="{{ finding.submodule.id }}" selected>{{ finding.submodule.name }}</option>
+                            {% endif %}
+                        </select>
+                    </div>
+                </div>
+
                 {% if finding and finding.screenshots %}
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">Existing Screenshots</label>
@@ -231,7 +257,6 @@
     margin: 0.5rem 0;
 }
 
-/* Remove default browser paragraph margins when empty */
 #editor p:empty {
     margin: 0;
 }
@@ -260,21 +285,26 @@ function displayFileNames(input) {
     document.getElementById('fileNames').textContent = fileNames || '';
 }
 
-// Helper function to convert HTML to plain text
-function htmlToPlainText(html) {
-    const temp = document.createElement('div');
-    temp.innerHTML = html;
+// Load submodules based on selected module
+async function loadSubmodules(moduleId) {
+    const submoduleSelect = document.getElementById('submoduleSelect');
+    submoduleSelect.innerHTML = '<option value="">No Submodule</option>';
 
-    // Replace <br> and closing block elements with newlines
-    const brElements = temp.querySelectorAll('br');
-    brElements.forEach(br => br.replaceWith('\n'));
+    if (!moduleId) return;
 
-    const blockElements = temp.querySelectorAll('div, p, h1, h2, h3, h4, h5, h6, li');
-    blockElements.forEach(el => {
-        el.insertAdjacentText('afterend', '\n');
-    });
+    try {
+        const response = await fetch(`/api/module/${moduleId}/submodules`);
+        const submodules = await response.json();
 
-    return temp.textContent || temp.innerText || '';
+        submodules.forEach(submodule => {
+            const option = document.createElement('option');
+            option.value = submodule.id;
+            option.textContent = submodule.name;
+            submoduleSelect.appendChild(option);
+        });
+    } catch (error) {
+        console.error('Failed to load submodules:', error);
+    }
 }
 
 // Initialize editor with existing content
@@ -282,16 +312,19 @@ window.addEventListener('DOMContentLoaded', function() {
     const editor = document.getElementById('editor');
 
     {% if finding and finding.description %}
-    // If editing, load the HTML content
     editor.innerHTML = {{ finding.description|tojson }};
     {% endif %}
 
-    // Remove error styling when user starts typing
     editor.addEventListener('input', function() {
         editor.style.border = '';
         const errorMsg = document.getElementById('editorError');
         if (errorMsg) errorMsg.remove();
     });
+
+    // Load submodules if module is already selected
+    {% if finding and finding.module_id %}
+    loadSubmodules({{ finding.module_id }});
+    {% endif %}
 });
 
 // Sync editor content to hidden textarea before form submission
@@ -299,17 +332,14 @@ document.querySelector('form').addEventListener('submit', function(e) {
     const editor = document.getElementById('editor');
     const description = document.getElementById('description');
 
-    // Get the content
     const editorContent = editor.innerHTML.trim();
     const textContent = editor.innerText.trim();
 
-    // Check if editor is empty
     if (!textContent || textContent === '') {
         e.preventDefault();
         editor.focus();
         editor.style.border = '2px solid #ef4444';
 
-        // Show error message
         let errorMsg = document.getElementById('editorError');
         if (!errorMsg) {
             errorMsg = document.createElement('p');
@@ -321,21 +351,16 @@ document.querySelector('form').addEventListener('submit', function(e) {
         return false;
     }
 
-    // Remove error styling if present
     editor.style.border = '';
     const errorMsg = document.getElementById('editorError');
     if (errorMsg) errorMsg.remove();
 
-    // Clean up the HTML content
     let cleanedContent = editorContent;
-
-    // Remove empty paragraphs and normalize spacing
     cleanedContent = cleanedContent.replace(/<p><br><\/p>/g, '<br>');
     cleanedContent = cleanedContent.replace(/<p>\s*<\/p>/g, '');
     cleanedContent = cleanedContent.replace(/<div><br><\/div>/g, '<br>');
     cleanedContent = cleanedContent.replace(/<div>\s*<\/div>/g, '');
 
-    // Set the cleaned value
     description.value = cleanedContent;
 });
 </script>
