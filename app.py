@@ -144,7 +144,7 @@ def load_user(user_id):
 @app.context_processor
 def inject_sidebar_data():
     if current_user.is_authenticated:
-        recent_projects = Project.query.filter_by(created_by=current_user.id) \
+        recent_projects = Project.query \
             .order_by(Project.updated_at.desc()).limit(3).all()
         return dict(sidebar_recent_projects=recent_projects)
     return dict(sidebar_recent_projects=[])
