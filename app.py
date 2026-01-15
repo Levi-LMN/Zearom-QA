@@ -1051,6 +1051,54 @@ def init_db():
         print(f"Upload folder: {app.config['UPLOAD_FOLDER']}")
 
 
+# Edit User Route
+@app.route('/user/<int:user_id>/edit', methods=['GET', 'POST'])
+@login_required
+def edit_user(user_id):
+    user = User.query.get_or_404(user_id)
+
+    if request.method == 'POST':
+        email = request.form.get('email').strip().lower()
+        name = request.form.get('name')
+
+        # Check if email is already taken by another user
+        existing_user = User.query.filter(
+            db.func.lower(User.email) == email,
+            User.id != user_id
+        ).first()
+
+        if existing_user:
+            flash('This email is already in use by another user!', 'error')
+            return redirect(url_for('edit_user', user_id=user_id))
+
+        user.email = email
+        user.name = name
+        db.session.commit()
+
+        flash('User details updated successfully!', 'success')
+        return redirect(url_for('users'))
+
+    return render_template('user_edit.html', user=user)
+
+
+# Reset User Password Route
+@app.route('/user/<int:user_id>/reset-password', methods=['POST'])
+@login_required
+def reset_user_password(user_id):
+    user = User.query.get_or_404(user_id)
+    new_password = request.form.get('new_password')
+
+    if not new_password or len(new_password) < 6:
+        flash('Password must be at least 6 characters long!', 'error')
+        return redirect(url_for('users'))
+
+    user.password = generate_password_hash(new_password)
+    user.is_google_user = False  # Enable password login
+    db.session.commit()
+
+    flash(f'Password reset successfully for {user.email}!', 'success')
+    return redirect(url_for('users'))
+
 
 # UPDATE THE MAIN BLOCK
 # ============================================
