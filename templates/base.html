@@ -3,7 +3,40 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+
+    <!-- Primary Meta Tags -->
     <title>{% block title %}Zearom QA{% endblock %}</title>
+    <meta name="title" content="{% block meta_title %}Zearom QA - Quality Assurance Management System{% endblock %}">
+    <meta name="description" content="{% block meta_description %}Comprehensive Quality Assurance management system for tracking projects, testing sessions, and findings. Streamline your QA process with Zearom.{% endblock %}">
+    <meta name="keywords" content="QA management, quality assurance, bug tracking, testing sessions, project management, findings, test management">
+    <meta name="author" content="Zearom">
+    <meta name="robots" content="index, follow">
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='img/logo.png') }}">
+    <link rel="shortcut icon" type="image/png" href="{{ url_for('static', filename='img/logo.png') }}">
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='img/logo.png') }}">
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="{{ request.url }}">
+    <meta property="og:title" content="{% block og_title %}Zearom QA - Quality Assurance Management System{% endblock %}">
+    <meta property="og:description" content="{% block og_description %}Comprehensive Quality Assurance management system for tracking projects, testing sessions, and findings.{% endblock %}">
+    <meta property="og:image" content="{{ url_for('static', filename='img/logo.png', _external=True) }}">
+    <meta property="og:site_name" content="Zearom QA">
+
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:url" content="{{ request.url }}">
+    <meta property="twitter:title" content="{% block twitter_title %}Zearom QA - Quality Assurance Management System{% endblock %}">
+    <meta property="twitter:description" content="{% block twitter_description %}Comprehensive Quality Assurance management system for tracking projects, testing sessions, and findings.{% endblock %}">
+    <meta property="twitter:image" content="{{ url_for('static', filename='img/logo.png', _external=True) }}">
+
+    <!-- Canonical URL -->
+    <link rel="canonical" href="{{ request.url }}">
+
+    <!-- Styles -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
@@ -180,12 +213,16 @@
         <aside class="sidebar-container flex flex-col">
             <!-- Logo -->
             <div class="p-5 border-b border-gray-200">
-                <div class="flex items-center space-x-2">
-                    <div class="w-7 h-7 bg-green-600 rounded-full flex items-center justify-center">
+                <a href="{{ url_for('dashboard') }}" class="flex items-center space-x-2">
+                    <img src="{{ url_for('static', filename='img/logo.png') }}"
+                         alt="Zearom QA Logo"
+                         class="w-7 h-7 rounded-full object-cover"
+                         onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                    <div class="w-7 h-7 bg-green-600 rounded-full items-center justify-center" style="display: none;">
                         <span class="text-white font-bold text-sm">Z</span>
                     </div>
                     <span class="font-bold text-base text-gray-900">Zearom QA</span>
-                </div>
+                </a>
             </div>
 
             <!-- Menu Section -->

@@ -780,7 +780,25 @@ def init_db():
         print(f"Database location: {os.path.join(BASE_DIR, 'zearom_qa.db')}")
         print(f"Upload folder: {app.config['UPLOAD_FOLDER']}")
 
+@app.route('/favicon.ico')
+def favicon():
+    """Serve favicon"""
+    return send_from_directory(
+        os.path.join(app.root_path, 'static', 'img'),
+        'logo.png',
+        mimetype='image/png'
+    )
 
+
+# Add these context processors for SEO
+@app.context_processor
+def inject_seo_defaults():
+    """Inject default SEO values for all templates"""
+    return dict(
+        site_name='Zearom QA',
+        site_description='Comprehensive Quality Assurance management system for tracking projects, testing sessions, and findings.',
+        site_url=request.url_root.rstrip('/')
+    )
 
 
 if __name__ == '__main__':
