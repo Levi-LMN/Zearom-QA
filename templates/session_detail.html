@@ -86,27 +86,81 @@
 
 <!-- Findings Table -->
 <div class="bg-white rounded-2xl shadow-sm border border-gray-100">
-    <!-- Search Bar -->
+    <!-- Search and Filter Bar -->
     <div class="p-6 border-b border-gray-200">
-        <form method="GET" action="{{ url_for('session_detail', session_id=testing_session.id) }}" class="flex items-center space-x-3">
-            <div class="flex-1 relative">
-                <input type="text"
-                       name="search"
-                       value="{{ search_query or '' }}"
-                       placeholder="Search findings by title or description..."
-                       class="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm">
-                <svg class="w-5 h-5 absolute left-3 top-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
-                </svg>
+        <form method="GET" action="{{ url_for('session_detail', session_id=testing_session.id) }}" class="space-y-4">
+            <!-- Search Bar -->
+            <div class="flex items-center space-x-3">
+                <div class="flex-1 relative">
+                    <input type="text"
+                           name="search"
+                           value="{{ search_query or '' }}"
+                           placeholder="Search findings by title or description..."
+                           class="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm">
+                    <svg class="w-5 h-5 absolute left-3 top-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                    </svg>
+                </div>
+                <button type="submit" class="btn-primary text-white px-5 py-2.5 rounded-lg text-sm font-medium">
+                    Search
+                </button>
+                <button type="button" onclick="toggleFilters()" class="text-gray-700 bg-white border border-gray-200 px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-gray-50 flex items-center">
+                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/>
+                    </svg>
+                    Filters
+                </button>
+                {% if search_query or request.args.get('severity') or request.args.get('status') or request.args.get('category') or request.args.get('module') %}
+                <a href="{{ url_for('session_detail', session_id=testing_session.id) }}" class="text-gray-700 bg-white border border-gray-200 px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-gray-50">
+                    Clear All
+                </a>
+                {% endif %}
             </div>
-            <button type="submit" class="btn-primary text-white px-5 py-2.5 rounded-lg text-sm font-medium">
-                Search
-            </button>
-            {% if search_query %}
-            <a href="{{ url_for('session_detail', session_id=testing_session.id) }}" class="text-gray-700 bg-white border border-gray-200 px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-gray-50">
-                Clear
-            </a>
-            {% endif %}
+
+            <!-- Filter Panel (Hidden by default) -->
+            <div id="filterPanel" class="hidden grid grid-cols-1 md:grid-cols-4 gap-4 pt-4 border-t border-gray-200">
+                <div>
+                    <label class="block text-xs font-medium text-gray-700 mb-1">Severity</label>
+                    <select name="severity" class="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-sm">
+                        <option value="">All Severities</option>
+                        <option value="Critical" {% if request.args.get('severity') == 'Critical' %}selected{% endif %}>Critical</option>
+                        <option value="High" {% if request.args.get('severity') == 'High' %}selected{% endif %}>High</option>
+                        <option value="Medium" {% if request.args.get('severity') == 'Medium' %}selected{% endif %}>Medium</option>
+                        <option value="Low" {% if request.args.get('severity') == 'Low' %}selected{% endif %}>Low</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-medium text-gray-700 mb-1">Status</label>
+                    <select name="status" class="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-sm">
+                        <option value="">All Statuses</option>
+                        <option value="Open" {% if request.args.get('status') == 'Open' %}selected{% endif %}>Open</option>
+                        <option value="In Progress" {% if request.args.get('status') == 'In Progress' %}selected{% endif %}>In Progress</option>
+                        <option value="Resolved" {% if request.args.get('status') == 'Resolved' %}selected{% endif %}>Resolved</option>
+                        <option value="Closed" {% if request.args.get('status') == 'Closed' %}selected{% endif %}>Closed</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-medium text-gray-700 mb-1">Category</label>
+                    <select name="category" class="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-sm">
+                        <option value="">All Categories</option>
+                        {% for category in categories %}
+                        <option value="{{ category.id }}" {% if request.args.get('category') == category.id|string %}selected{% endif %}>{{ category.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-medium text-gray-700 mb-1">Module</label>
+                    <select name="module" class="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-sm">
+                        <option value="">All Modules</option>
+                        {% for module in modules %}
+                        <option value="{{ module.id }}" {% if request.args.get('module') == module.id|string %}selected{% endif %}>{{ module.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
         </form>
     </div>
 
@@ -128,7 +182,6 @@
             <tbody class="divide-y divide-gray-200">
                 {% for finding in findings_pagination.items %}
                 <tr class="hover:bg-gray-50 transition">
-                    <!-- Finding Title Column - Now with truncation -->
                     <td class="px-6 py-4 max-w-xs">
                         <div class="flex flex-col">
                             <a href="{{ url_for('finding_detail', finding_id=finding.id) }}"
@@ -215,13 +268,13 @@
                 {% else %}
                 <tr>
                     <td colspan="8" class="px-6 py-12 text-center">
-                        {% if search_query %}
+                        {% if search_query or request.args.get('severity') or request.args.get('status') or request.args.get('category') or request.args.get('module') %}
                         <svg class="w-16 h-16 mx-auto text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
                         </svg>
-                        <p class="text-sm text-gray-500 mb-4">No findings match your search</p>
+                        <p class="text-sm text-gray-500 mb-4">No findings match your filters</p>
                         <a href="{{ url_for('session_detail', session_id=testing_session.id) }}" class="text-sm text-green-600 hover:text-green-700 font-medium">
-                            Clear search
+                            Clear all filters
                         </a>
                         {% else %}
                         <svg class="w-16 h-16 mx-auto text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -249,7 +302,7 @@
         </div>
         <div class="flex space-x-2">
             {% if findings_pagination.has_prev %}
-            <a href="{{ url_for('session_detail', session_id=testing_session.id, page=findings_pagination.prev_num, search=search_query) }}"
+            <a href="{{ url_for('session_detail', session_id=testing_session.id, page=findings_pagination.prev_num, search=search_query, severity=request.args.get('severity'), status=request.args.get('status'), category=request.args.get('category'), module=request.args.get('module')) }}"
                class="px-4 py-2 border border-gray-200 rounded-lg text-sm hover:bg-gray-50">
                 Previous
             </a>
@@ -260,7 +313,7 @@
             </span>
 
             {% if findings_pagination.has_next %}
-            <a href="{{ url_for('session_detail', session_id=testing_session.id, page=findings_pagination.next_num, search=search_query) }}"
+            <a href="{{ url_for('session_detail', session_id=testing_session.id, page=findings_pagination.next_num, search=search_query, severity=request.args.get('severity'), status=request.args.get('status'), category=request.args.get('category'), module=request.args.get('module')) }}"
                class="px-4 py-2 border border-gray-200 rounded-lg text-sm hover:bg-gray-50">
                 Next
             </a>
@@ -271,7 +324,6 @@
 </div>
 
 <style>
-/* Prose styling for rich text content */
 .prose h3 {
     font-size: 1.125rem;
     font-weight: 600;
@@ -296,72 +348,31 @@
     margin: 0.125rem 0;
 }
 
-.prose code {
-    background-color: #F3F4F6;
-    padding: 0.125rem 0.375rem;
-    border-radius: 0.25rem;
-    font-family: monospace;
-    font-size: 0.875em;
-    color: #1F2937;
-}
-
-.prose pre {
-    background-color: #F3F4F6;
-    padding: 1rem;
-    border-radius: 0.5rem;
-    overflow-x: auto;
-    margin: 0.5rem 0;
-}
-
-.prose pre code {
-    background: none;
-    padding: 0;
-}
-
-.prose strong {
-    font-weight: 600;
-    color: #1F2937;
-}
-
-.prose em {
-    font-style: italic;
-}
-
-.prose u {
-    text-decoration: underline;
-}
-
 .prose p {
     margin: 0.25rem 0;
 }
 
-.prose p:empty {
-    margin: 0;
-}
-
-/* Ensure table columns don't overflow */
 table {
     table-layout: auto;
 }
 
-/* Truncation for long text */
 .truncate {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
 
-.max-w-xs {
-    max-width: 20rem;
-}
-
-/* Prevent table from being too narrow on small screens */
 .min-w-max {
     min-width: 1000px;
 }
 </style>
 
 <script>
+function toggleFilters() {
+    const filterPanel = document.getElementById('filterPanel');
+    filterPanel.classList.toggle('hidden');
+}
+
 function updateFindingStatus(findingId, newStatus) {
     if (confirm(`Update status to ${newStatus}?`)) {
         const formData = new FormData();
@@ -374,7 +385,6 @@ function updateFindingStatus(findingId, newStatus) {
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                // Reload page to update stats
                 location.reload();
             } else {
                 alert('Failed to update status');
@@ -387,7 +397,6 @@ function updateFindingStatus(findingId, newStatus) {
             location.reload();
         });
     } else {
-        // Reset select to previous value
         location.reload();
     }
 }

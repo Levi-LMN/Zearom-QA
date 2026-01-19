@@ -60,7 +60,7 @@
                              contenteditable="true"
                              class="min-h-[150px] p-4 focus:outline-none text-sm"
                              style="max-height: 300px; overflow-y: auto;"
-                             placeholder="Describe the testing session scope and objectives...">{{ testing_session.description if testing_session else '' }}</div>
+                             placeholder="Describe the testing session scope and objectives..."></div>
 
                         <!-- Hidden textarea for form submission -->
                         <textarea name="description" id="description" class="hidden"></textarea>
@@ -135,6 +135,10 @@
 #editor u {
     text-decoration: underline;
 }
+
+#editor p {
+    margin: 0.5rem 0;
+}
 </style>
 
 <script>
@@ -143,25 +147,33 @@ function formatText(command, value = null) {
     document.getElementById('editor').focus();
 }
 
+// Initialize editor with existing content
+window.addEventListener('DOMContentLoaded', function() {
+    const editor = document.getElementById('editor');
+
+    // Load existing content if editing
+    {% if testing_session and testing_session.description %}
+    // Parse the HTML content and set it in the editor
+    editor.innerHTML = {{ testing_session.description|tojson }};
+    {% endif %}
+});
+
 // Sync editor content to hidden textarea before form submission
 document.querySelector('form').addEventListener('submit', function(e) {
     const editor = document.getElementById('editor');
     const description = document.getElementById('description');
-    const editorContent = editor.innerHTML.trim();
 
-    // Description is optional for sessions, so just sync the content
+    // Get the HTML content from the editor
+    let editorContent = editor.innerHTML.trim();
+
+    // Clean up empty paragraphs and divs
+    editorContent = editorContent.replace(/<p><br><\/p>/g, '<br>');
+    editorContent = editorContent.replace(/<p>\s*<\/p>/g, '');
+    editorContent = editorContent.replace(/<div><br><\/div>/g, '<br>');
+    editorContent = editorContent.replace(/<div>\s*<\/div>/g, '');
+
+    // Set the cleaned content to the hidden textarea
     description.value = editorContent;
-});
-
-// Initialize editor with existing content if editing
-window.addEventListener('DOMContentLoaded', function() {
-    const editor = document.getElementById('editor');
-    const description = document.getElementById('description');
-
-    // If there's existing content in the textarea, set it in the editor
-    if (description.value) {
-        editor.innerHTML = description.value;
-    }
 });
 </script>
 {% endblock %}

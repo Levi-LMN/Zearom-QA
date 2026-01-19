@@ -19,6 +19,10 @@ from werkzeug.utils import secure_filename
 from authlib.integrations.flask_client import OAuth
 import secrets
 from dotenv import load_dotenv
+import os
+from datetime import datetime, timedelta
+
+
 
 # Load environment variables FIRST
 load_dotenv()
@@ -617,6 +621,8 @@ def new_session(project_id):
     return render_template('session_form.html', project=project, testing_session=None)
 
 
+# Add this updated route to your app.py, replacing the existing session_detail route
+
 @app.route('/session/<int:session_id>')
 @login_required
 def session_detail(session_id):
@@ -624,9 +630,11 @@ def session_detail(session_id):
     categories = Category.query.filter_by(project_id=testing_session.project_id).all()
     modules = Module.query.filter_by(project_id=testing_session.project_id).all()
 
-    search_query = request.args.get('search', '').strip()
+    # Start with base query
     findings_query = Finding.query.filter_by(session_id=session_id)
 
+    # Apply search filter
+    search_query = request.args.get('search', '').strip()
     if search_query:
         findings_query = findings_query.filter(
             db.or_(
@@ -635,11 +643,34 @@ def session_detail(session_id):
             )
         )
 
+    # Apply severity filter
+    severity_filter = request.args.get('severity', '').strip()
+    if severity_filter:
+        findings_query = findings_query.filter(Finding.severity == severity_filter)
+
+    # Apply status filter
+    status_filter = request.args.get('status', '').strip()
+    if status_filter:
+        findings_query = findings_query.filter(Finding.status == status_filter)
+
+    # Apply category filter
+    category_filter = request.args.get('category', '').strip()
+    if category_filter:
+        findings_query = findings_query.filter(Finding.category_id == int(category_filter))
+
+    # Apply module filter
+    module_filter = request.args.get('module', '').strip()
+    if module_filter:
+        findings_query = findings_query.filter(Finding.module_id == int(module_filter))
+
+    # Pagination
     page = request.args.get('page', 1, type=int)
     per_page = 20
-    findings_pagination = findings_query.order_by(Finding.created_at.desc()).paginate(page=page, per_page=per_page,
-                                                                                      error_out=False)
+    findings_pagination = findings_query.order_by(Finding.created_at.desc()).paginate(
+        page=page, per_page=per_page, error_out=False
+    )
 
+    # Get all findings for stats (without filters for accurate totals)
     all_findings = Finding.query.filter_by(session_id=session_id).all()
 
     return render_template('session_detail.html',
@@ -649,7 +680,6 @@ def session_detail(session_id):
                            categories=categories,
                            modules=modules,
                            search_query=search_query)
-
 
 @app.route('/finding/<int:finding_id>/update-status', methods=['POST'])
 @login_required
@@ -1098,6 +1128,195 @@ def reset_user_password(user_id):
 
     flash(f'Password reset successfully for {user.email}!', 'success')
     return redirect(url_for('users'))
+
+
+
+def get_file_size(filepath):
+    """Get file size in bytes"""
+    try:
+        return os.path.getsize(filepath)
+    except:
+        return 0
+
+
+def format_file_size(bytes_size):
+    """Format file size to human readable format"""
+    if bytes_size < 1024:
+        return f"{bytes_size} B"
+    elif bytes_size < 1024 * 1024:
+        return f"{bytes_size / 1024:.1f} KB"
+    elif bytes_size < 1024 * 1024 * 1024:
+        return f"{bytes_size / (1024 * 1024):.1f} MB"
+    else:
+        return f"{bytes_size / (1024 * 1024 * 1024):.1f} GB"
+
+
+def get_directory_size(directory):
+    """Calculate total size of all files in directory"""
+    total_size = 0
+    try:
+        for filename in os.listdir(directory):
+            filepath = os.path.join(directory, filename)
+            if os.path.isfile(filepath):
+                total_size += os.path.getsize(filepath)
+    except:
+        pass
+    return total_size
+
+
+@app.route('/media-manager')
+@login_required
+def media_manager():
+    # Get all screenshots
+    screenshots_query = Screenshot.query
+
+    # Apply search filter
+    search_query = request.args.get('search', '').strip()
+    if search_query:
+        screenshots_query = screenshots_query.filter(
+            Screenshot.filename.ilike(f'%{search_query}%')
+        )
+
+    # Apply date filter
+    date_filter = request.args.get('date_filter', '').strip()
+    from_date = request.args.get('from_date', '').strip()
+    to_date = request.args.get('to_date', '').strip()
+
+    if date_filter == 'today':
+        today_start = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+        screenshots_query = screenshots_query.filter(Screenshot.uploaded_at >= today_start)
+    elif date_filter == 'week':
+        week_start = datetime.now() - timedelta(days=7)
+        screenshots_query = screenshots_query.filter(Screenshot.uploaded_at >= week_start)
+    elif date_filter == 'month':
+        month_start = datetime.now() - timedelta(days=30)
+        screenshots_query = screenshots_query.filter(Screenshot.uploaded_at >= month_start)
+    elif date_filter == 'custom' and from_date and to_date:
+        try:
+            from_datetime = datetime.strptime(from_date, '%Y-%m-%d')
+            to_datetime = datetime.strptime(to_date, '%Y-%m-%d').replace(hour=23, minute=59, second=59)
+            screenshots_query = screenshots_query.filter(
+                Screenshot.uploaded_at >= from_datetime,
+                Screenshot.uploaded_at <= to_datetime
+            )
+        except:
+            pass
+
+    # Apply sorting
+    sort = request.args.get('sort', 'date_desc')
+    if sort == 'date_desc':
+        screenshots_query = screenshots_query.order_by(Screenshot.uploaded_at.desc())
+    elif sort == 'date_asc':
+        screenshots_query = screenshots_query.order_by(Screenshot.uploaded_at.asc())
+    elif sort == 'name_asc':
+        screenshots_query = screenshots_query.order_by(Screenshot.filename.asc())
+    elif sort == 'name_desc':
+        screenshots_query = screenshots_query.order_by(Screenshot.filename.desc())
+
+    # Pagination
+    page = request.args.get('page', 1, type=int)
+    per_page = 30
+    pagination = screenshots_query.paginate(page=page, per_page=per_page, error_out=False)
+
+    # Get all screenshots for stats
+    all_screenshots = Screenshot.query.all()
+
+    # Calculate storage statistics
+    total_size = 0
+    largest_file_size = 0
+    file_sizes = []
+
+    for screenshot in all_screenshots:
+        if os.path.exists(screenshot.filepath):
+            file_size = get_file_size(screenshot.filepath)
+            total_size += file_size
+            file_sizes.append(file_size)
+            if file_size > largest_file_size:
+                largest_file_size = file_size
+
+    average_file_size = sum(file_sizes) / len(file_sizes) if file_sizes else 0
+
+    # Format sizes
+    total_size_formatted = format_file_size(total_size)
+    largest_file_size_formatted = format_file_size(largest_file_size)
+    average_file_size_formatted = format_file_size(average_file_size)
+
+    # Add size info to screenshots in pagination
+    for screenshot in pagination.items:
+        if os.path.exists(screenshot.filepath):
+            screenshot.size_formatted = format_file_size(get_file_size(screenshot.filepath))
+            screenshot.file_size = get_file_size(screenshot.filepath)
+        else:
+            screenshot.size_formatted = "0 B"
+            screenshot.file_size = 0
+
+    # Sort by size if requested
+    if sort == 'size_desc':
+        pagination.items = sorted(pagination.items, key=lambda x: x.file_size, reverse=True)
+    elif sort == 'size_asc':
+        pagination.items = sorted(pagination.items, key=lambda x: x.file_size)
+
+    return render_template('media_manager.html',
+                           screenshots=pagination.items,
+                           pagination=pagination,
+                           total_size_formatted=total_size_formatted,
+                           largest_file_size=largest_file_size_formatted,
+                           average_file_size=average_file_size_formatted)
+
+
+@app.route('/api/media/delete/<int:screenshot_id>', methods=['POST'])
+@login_required
+def delete_screenshot_api(screenshot_id):
+    try:
+        screenshot = Screenshot.query.get_or_404(screenshot_id)
+
+        # Delete file from filesystem
+        if os.path.exists(screenshot.filepath):
+            os.remove(screenshot.filepath)
+
+        # Delete from database
+        db.session.delete(screenshot)
+        db.session.commit()
+
+        return jsonify({'success': True, 'message': 'Screenshot deleted successfully'})
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
+@app.route('/api/media/bulk-delete', methods=['POST'])
+@login_required
+def bulk_delete_screenshots():
+    try:
+        data = request.get_json()
+        ids = data.get('ids', [])
+
+        if not ids:
+            return jsonify({'success': False, 'message': 'No screenshots selected'}), 400
+
+        deleted_count = 0
+        for screenshot_id in ids:
+            screenshot = Screenshot.query.get(screenshot_id)
+            if screenshot:
+                # Delete file from filesystem
+                if os.path.exists(screenshot.filepath):
+                    try:
+                        os.remove(screenshot.filepath)
+                    except:
+                        pass
+
+                # Delete from database
+                db.session.delete(screenshot)
+                deleted_count += 1
+
+        db.session.commit()
+
+        return jsonify({
+            'success': True,
+            'message': f'{deleted_count} screenshot(s) deleted successfully',
+            'deleted_count': deleted_count
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
 
 
 # UPDATE THE MAIN BLOCK
