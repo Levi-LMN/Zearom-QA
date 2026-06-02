@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% block title %}Access Denied - Zearom QA{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto py-10">
+    <div class="bg-white rounded-3xl shadow-sm border border-gray-100 p-8 md:p-10 text-center">
+        <div class="w-16 h-16 mx-auto mb-5 rounded-full bg-red-50 flex items-center justify-center">
+            <svg class="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M5.05 19h13.9c1.54 0 2.502-1.667 1.732-3L14.732 5c-.77-1.333-2.694-1.333-3.464 0L3.318 16c-.77 1.333.192 3 1.732 3z"/>
+            </svg>
+        </div>
+        <h1 class="text-gray-900 mb-2">Access denied</h1>
+        <p class="text-sm text-gray-500 max-w-md mx-auto">{{ description }}</p>
+
+        <div class="mt-8 flex items-center justify-center gap-3 flex-wrap">
+            <a href="{{ url_for('dashboard') }}" class="btn-primary text-white px-5 py-2.5 rounded-lg text-sm font-medium">
+                Go to Dashboard
+            </a>
+            {% if request.referrer %}
+            <a href="{{ request.referrer }}" class="px-5 py-2.5 rounded-lg text-sm font-medium border border-gray-200 text-gray-700 hover:bg-gray-50">
+                Go Back
+            </a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

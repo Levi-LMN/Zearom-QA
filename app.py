@@ -283,6 +283,12 @@ def inject_sidebar_data():
     return dict(sidebar_recent_projects=[])
 
 
+@app.errorhandler(403)
+def forbidden(error):
+    description = getattr(error, 'description', None) or 'You do not have permission to access this page.'
+    return render_template('access_denied.html', description=description), 403
+
+
 # CRITICAL: Add explicit route for serving uploaded files
 @app.route('/static/uploads/<path:filename>')
 def uploaded_file(filename):
@@ -467,6 +473,7 @@ def api_search():
 @app.route('/dashboard')
 @login_required
 def dashboard():
+    user_role = normalize_role(getattr(current_user, 'role', None))
     projects = visible_projects_query().order_by(Project.updated_at.desc()).all()
     recent_findings = visible_findings_query().order_by(Finding.created_at.desc()).limit(10).all()
 
@@ -498,7 +505,14 @@ def dashboard():
         'open_findings': open_findings
     }
 
-    return render_template('dashboard.html', projects=projects, recent_findings=recent_findings, stats=stats)
+    return render_template(
+        'dashboard.html',
+        projects=projects,
+        recent_findings=recent_findings,
+        stats=stats,
+        user_role=user_role,
+        is_admin=is_admin_user()
+    )
 
 
 @app.route('/projects')
@@ -510,6 +524,7 @@ def projects():
 
 @app.route('/project/new', methods=['GET', 'POST'])
 @login_required
+@admin_required
 def new_project():
     if request.method == 'POST':
         name = request.form.get('name')
@@ -1394,6 +1409,7 @@ def get_directory_size(directory):
 
 @app.route('/media-manager')
 @login_required
+@admin_required
 def media_manager():
     # Get all screenshots
     screenshots_query = Screenshot.query
@@ -1494,6 +1510,7 @@ def media_manager():
 
 @app.route('/api/media/delete/<int:screenshot_id>', methods=['POST'])
 @login_required
+@admin_required
 def delete_screenshot_api(screenshot_id):
     try:
         screenshot = Screenshot.query.get_or_404(screenshot_id)
@@ -1513,6 +1530,7 @@ def delete_screenshot_api(screenshot_id):
 
 @app.route('/api/media/bulk-delete', methods=['POST'])
 @login_required
+@admin_required
 def bulk_delete_screenshots():
     try:
         data = request.get_json()

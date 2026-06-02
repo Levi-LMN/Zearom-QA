@@ -8,15 +8,25 @@
     <div class="flex items-center justify-between">
         <div>
             <h1 class="text-gray-900 mb-1">Dashboard</h1>
-            <p class="text-sm text-gray-500">Plan, prioritize, and accomplish your tasks with ease.</p>
+            <p class="text-sm text-gray-500">
+                {% if user_role == 'admin' %}
+                Monitor all projects, users, and findings across the workspace.
+                {% elif user_role == 'developer' %}
+                Review findings assigned to your projects and keep statuses up to date.
+                {% else %}
+                Focus on the projects and testing sessions assigned to you.
+                {% endif %}
+            </p>
         </div>
         <div class="flex space-x-3">
+            {% if is_admin %}
             <a href="{{ url_for('new_project') }}" class="btn-primary text-white px-5 py-2.5 rounded-lg text-sm font-medium flex items-center">
                 <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
                 </svg>
                 Add Project
             </a>
+            {% endif %}
         </div>
     </div>
 </div>
@@ -26,7 +36,7 @@
     <!-- Total Projects -->
     <div class="stat-card bg-gradient-to-br from-green-600 to-green-700 rounded-2xl p-6 text-white">
         <div class="flex items-start justify-between mb-4">
-            <h3 class="text-sm font-medium opacity-90">Total Projects</h3>
+            <h3 class="text-sm font-medium opacity-90">{% if user_role == 'admin' %}Total Projects{% else %}Assigned Projects{% endif %}</h3>
             <div class="w-8 h-8 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
@@ -38,14 +48,14 @@
             <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
             </svg>
-            <span>Increased from last month</span>
+            <span>{% if user_role == 'admin' %}All workspace projects{% else %}Projects available to your account{% endif %}</span>
         </div>
     </div>
 
     <!-- Ended Projects -->
     <div class="stat-card bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
         <div class="flex items-start justify-between mb-4">
-            <h3 class="text-sm font-medium text-gray-600">Ended Projects</h3>
+            <h3 class="text-sm font-medium text-gray-600">{% if user_role == 'admin' %}Ended Projects{% else %}Completed Sessions{% endif %}</h3>
             <div class="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
                 <svg class="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
@@ -67,14 +77,14 @@
             <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
             </svg>
-            <span>Increased from last month</span>
+            <span>{% if user_role == 'admin' %}Completed across the workspace{% else %}Completed in your scope{% endif %}</span>
         </div>
     </div>
 
     <!-- Running Projects -->
     <div class="stat-card bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
         <div class="flex items-start justify-between mb-4">
-            <h3 class="text-sm font-medium text-gray-600">Running Projects</h3>
+            <h3 class="text-sm font-medium text-gray-600">{% if user_role == 'admin' %}Running Projects{% else %}Testing Sessions{% endif %}</h3>
             <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
                 <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
@@ -86,7 +96,7 @@
             <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
             </svg>
-            <span>Increased from last month</span>
+            <span>{% if user_role == 'admin' %}Active across the workspace{% else %}Active in your scope{% endif %}</span>
         </div>
     </div>
 
@@ -143,12 +153,16 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>
                     </svg>
                     <p class="text-sm text-gray-500 mb-4">No projects yet</p>
+                    {% if is_admin %}
                     <a href="{{ url_for('new_project') }}" class="inline-flex items-center text-sm text-green-600 hover:text-green-700 font-medium">
                         <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
                         </svg>
                         Create your first project
                     </a>
+                    {% else %}
+                    <p class="text-xs text-gray-400">Ask an admin to assign you to a project.</p>
+                    {% endif %}
                 </div>
                 {% endfor %}
             </div>
