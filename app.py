@@ -11,7 +11,8 @@ python app.py
 
 import os
 from datetime import datetime
-from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify, send_from_directory
+from functools import wraps
+from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify, send_from_directory, abort
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -21,6 +22,7 @@ import secrets
 from dotenv import load_dotenv
 import os
 from datetime import datetime, timedelta
+from sqlalchemy import text
 
 
 
@@ -51,6 +53,8 @@ login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 oauth = OAuth(app)
 
+ROLE_CHOICES = ('admin', 'qa', 'developer')
+
 # Configure Google OAuth
 google = oauth.register(
     name='google',
@@ -67,11 +71,13 @@ class User(UserMixin, db.Model):
     email = db.Column(db.String(150), unique=True, nullable=False)
     password = db.Column(db.String(200))
     name = db.Column(db.String(100))
+    role = db.Column(db.String(20), nullable=False, default='qa')
     is_google_user = db.Column(db.Boolean, default=False)
     is_active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     projects = db.relationship('Project', backref='creator', lazy=True)
+    accessible_projects = db.relationship('Project', secondary='project_memberships', backref='members', lazy='select')
     categories = db.relationship('Category', backref='creator', lazy=True)
     modules = db.relationship('Module', backref='creator', lazy=True)
     findings = db.relationship('Finding', foreign_keys='Finding.created_by', backref='creator', lazy=True)
@@ -158,6 +164,24 @@ class Finding(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     screenshots = db.relationship('Screenshot', backref='finding', lazy=True, cascade='all, delete-orphan')
+    comments = db.relationship('FindingComment', backref='finding', lazy=True, cascade='all, delete-orphan')
+
+
+project_memberships = db.Table(
+    'project_memberships',
+    db.Column('project_id', db.Integer, db.ForeignKey('project.id'), primary_key=True),
+    db.Column('user_id', db.Integer, db.ForeignKey('user.id'), primary_key=True)
+)
+
+
+class FindingComment(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    finding_id = db.Column(db.Integer, db.ForeignKey('finding.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    body = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    author = db.relationship('User', foreign_keys=[user_id])
 
 
 class Screenshot(db.Model):
@@ -173,11 +197,87 @@ def load_user(user_id):
     return User.query.get(int(user_id))
 
 
+def normalize_role(role_value):
+    role = (role_value or 'qa').strip().lower()
+    if role not in ROLE_CHOICES:
+        return 'qa'
+    return role
+
+
+def is_admin_user(user=None):
+    user = user or current_user
+    return bool(user.is_authenticated and normalize_role(getattr(user, 'role', None)) == 'admin')
+
+
+def admin_required(view):
+    @wraps(view)
+    @login_required
+    def wrapped(*args, **kwargs):
+        if not is_admin_user():
+            abort(403)
+        return view(*args, **kwargs)
+
+    return wrapped
+
+
+def accessible_project_ids(user=None):
+    user = user or current_user
+    if not user.is_authenticated:
+        return []
+    if is_admin_user(user):
+        return [row[0] for row in Project.query.with_entities(Project.id).all()]
+    return [project.id for project in user.accessible_projects]
+
+
+def can_access_project(project):
+    if is_admin_user():
+        return True
+    if project is None or not current_user.is_authenticated:
+        return False
+    return project.id in accessible_project_ids()
+
+
+def require_project_access(project):
+    if not can_access_project(project):
+        abort(403)
+
+
+def can_access_finding(finding):
+    if is_admin_user():
+        return True
+    if finding is None:
+        return False
+    return can_access_project(finding.session.project)
+
+
+def require_finding_access(finding):
+    if not can_access_finding(finding):
+        abort(403)
+
+
+def visible_projects_query():
+    if is_admin_user():
+        return Project.query
+    project_ids = accessible_project_ids()
+    if not project_ids:
+        return Project.query.filter(Project.id.in_([]))
+    return Project.query.filter(Project.id.in_(project_ids))
+
+
+def visible_findings_query():
+    if is_admin_user():
+        return Finding.query
+    project_ids = accessible_project_ids()
+    if not project_ids:
+        return Finding.query.filter(Finding.id.in_([]))
+    return Finding.query.join(TestingSession).filter(TestingSession.project_id.in_(project_ids))
+
+
 # Context processor for sidebar
 @app.context_processor
 def inject_sidebar_data():
     if current_user.is_authenticated:
-        recent_projects = Project.query \
+        recent_projects = visible_projects_query() \
             .order_by(Project.updated_at.desc()).limit(3).all()
         return dict(sidebar_recent_projects=recent_projects)
     return dict(sidebar_recent_projects=[])
@@ -271,21 +371,23 @@ def search():
         return redirect(url_for('dashboard'))
 
     # Search across projects, sessions, and findings
-    projects = Project.query.filter(
+    projects = visible_projects_query().filter(
         db.or_(
             Project.name.ilike(f'%{query}%'),
             Project.description.ilike(f'%{query}%')
         )
     ).all()
 
-    sessions = TestingSession.query.filter(
+    sessions = TestingSession.query.join(Project).filter(
+        Project.id.in_(accessible_project_ids()) if not is_admin_user() else db.text('1=1')
+    ).filter(
         db.or_(
             TestingSession.name.ilike(f'%{query}%'),
             TestingSession.description.ilike(f'%{query}%')
         )
     ).all()
 
-    findings = Finding.query.filter(
+    findings = visible_findings_query().filter(
         db.or_(
             Finding.title.ilike(f'%{query}%'),
             Finding.description.ilike(f'%{query}%')
@@ -310,7 +412,7 @@ def api_search():
     results = []
 
     # Search projects
-    projects = Project.query.filter(
+    projects = visible_projects_query().filter(
         db.or_(
             Project.name.ilike(f'%{query}%'),
             Project.description.ilike(f'%{query}%')
@@ -326,7 +428,9 @@ def api_search():
         })
 
     # Search sessions
-    sessions = TestingSession.query.filter(
+    sessions = TestingSession.query.join(Project).filter(
+        Project.id.in_(accessible_project_ids()) if not is_admin_user() else db.text('1=1')
+    ).filter(
         db.or_(
             TestingSession.name.ilike(f'%{query}%'),
             TestingSession.description.ilike(f'%{query}%')
@@ -342,7 +446,7 @@ def api_search():
         })
 
     # Search findings
-    findings = Finding.query.filter(
+    findings = visible_findings_query().filter(
         db.or_(
             Finding.title.ilike(f'%{query}%'),
             Finding.description.ilike(f'%{query}%')
@@ -363,14 +467,35 @@ def api_search():
 @app.route('/dashboard')
 @login_required
 def dashboard():
-    projects = Project.query.order_by(Project.updated_at.desc()).all()
-    recent_findings = Finding.query.order_by(Finding.created_at.desc()).limit(10).all()
+    projects = visible_projects_query().order_by(Project.updated_at.desc()).all()
+    recent_findings = visible_findings_query().order_by(Finding.created_at.desc()).limit(10).all()
+
+    project_ids = accessible_project_ids()
+
+    if is_admin_user():
+        total_projects = Project.query.count()
+        total_sessions = TestingSession.query.count()
+        total_findings = Finding.query.count()
+        open_findings = Finding.query.filter_by(status='Open').count()
+    elif project_ids:
+        total_projects = Project.query.filter(Project.id.in_(project_ids)).count()
+        total_sessions = TestingSession.query.filter(TestingSession.project_id.in_(project_ids)).count()
+        total_findings = Finding.query.join(TestingSession).filter(TestingSession.project_id.in_(project_ids)).count()
+        open_findings = Finding.query.join(TestingSession).filter(
+            TestingSession.project_id.in_(project_ids),
+            Finding.status == 'Open'
+        ).count()
+    else:
+        total_projects = 0
+        total_sessions = 0
+        total_findings = 0
+        open_findings = 0
 
     stats = {
-        'total_projects': Project.query.count(),
-        'total_sessions': TestingSession.query.count(),
-        'total_findings': Finding.query.count(),
-        'open_findings': Finding.query.filter_by(status='Open').count()
+        'total_projects': total_projects,
+        'total_sessions': total_sessions,
+        'total_findings': total_findings,
+        'open_findings': open_findings
     }
 
     return render_template('dashboard.html', projects=projects, recent_findings=recent_findings, stats=stats)
@@ -379,7 +504,7 @@ def dashboard():
 @app.route('/projects')
 @login_required
 def projects():
-    all_projects = Project.query.order_by(Project.updated_at.desc()).all()
+    all_projects = visible_projects_query().order_by(Project.updated_at.desc()).all()
     return render_template('projects.html', projects=all_projects)
 
 
@@ -393,6 +518,8 @@ def new_project():
         project = Project(name=name, description=description, created_by=current_user.id)
         db.session.add(project)
         db.session.commit()
+        project.members.append(current_user)
+        db.session.commit()
 
         flash('Project created successfully!', 'success')
         return redirect(url_for('project_detail', project_id=project.id))
@@ -404,6 +531,7 @@ def new_project():
 @login_required
 def project_detail(project_id):
     project = Project.query.get_or_404(project_id)
+    require_project_access(project)
 
     page = request.args.get('page', 1, type=int)
     per_page = 10
@@ -425,6 +553,7 @@ def project_detail(project_id):
 @login_required
 def edit_project(project_id):
     project = Project.query.get_or_404(project_id)
+    require_project_access(project)
 
     if request.method == 'POST':
         project.name = request.form.get('name')
@@ -442,6 +571,7 @@ def edit_project(project_id):
 @login_required
 def delete_project(project_id):
     project = Project.query.get_or_404(project_id)
+    require_project_access(project)
     db.session.delete(project)
     db.session.commit()
     flash('Project deleted successfully!', 'success')
@@ -452,6 +582,7 @@ def delete_project(project_id):
 @login_required
 def new_category(project_id):
     project = Project.query.get_or_404(project_id)
+    require_project_access(project)
 
     if request.method == 'POST':
         name = request.form.get('name')
@@ -478,6 +609,7 @@ def new_category(project_id):
 @login_required
 def new_module(project_id):
     project = Project.query.get_or_404(project_id)
+    require_project_access(project)
 
     if request.method == 'POST':
         name = request.form.get('name')
@@ -504,6 +636,7 @@ def new_module(project_id):
 @login_required
 def module_detail(module_id):
     module = Module.query.get_or_404(module_id)
+    require_project_access(module.project)
     submodules = Submodule.query.filter_by(module_id=module_id).order_by(Submodule.created_at.desc()).all()
     return render_template('module_detail.html', module=module, submodules=submodules)
 
@@ -512,6 +645,7 @@ def module_detail(module_id):
 @login_required
 def edit_module(module_id):
     module = Module.query.get_or_404(module_id)
+    require_project_access(module.project)
 
     if request.method == 'POST':
         module.name = request.form.get('name')
@@ -530,6 +664,7 @@ def edit_module(module_id):
 @login_required
 def delete_module(module_id):
     module = Module.query.get_or_404(module_id)
+    require_project_access(module.project)
     project_id = module.project_id
     db.session.delete(module)
     db.session.commit()
@@ -541,6 +676,7 @@ def delete_module(module_id):
 @login_required
 def new_submodule(module_id):
     module = Module.query.get_or_404(module_id)
+    require_project_access(module.project)
 
     if request.method == 'POST':
         name = request.form.get('name')
@@ -564,6 +700,7 @@ def new_submodule(module_id):
 @login_required
 def edit_submodule(submodule_id):
     submodule = Submodule.query.get_or_404(submodule_id)
+    require_project_access(submodule.module.project)
 
     if request.method == 'POST':
         submodule.name = request.form.get('name')
@@ -581,6 +718,7 @@ def edit_submodule(submodule_id):
 @login_required
 def delete_submodule(submodule_id):
     submodule = Submodule.query.get_or_404(submodule_id)
+    require_project_access(submodule.module.project)
     module_id = submodule.module_id
     db.session.delete(submodule)
     db.session.commit()
@@ -602,6 +740,7 @@ def get_submodules(module_id):
 @login_required
 def new_session(project_id):
     project = Project.query.get_or_404(project_id)
+    require_project_access(project)
 
     if request.method == 'POST':
         name = request.form.get('name')
@@ -627,6 +766,7 @@ def new_session(project_id):
 @login_required
 def session_detail(session_id):
     testing_session = TestingSession.query.get_or_404(session_id)
+    require_project_access(testing_session.project)
     categories = Category.query.filter_by(project_id=testing_session.project_id).all()
     modules = Module.query.filter_by(project_id=testing_session.project_id).all()
 
@@ -685,6 +825,7 @@ def session_detail(session_id):
 @login_required
 def update_finding_status(finding_id):
     finding = Finding.query.get_or_404(finding_id)
+    require_finding_access(finding)
     new_status = request.form.get('status')
 
     if new_status in ['Open', 'In Progress', 'Resolved', 'Closed']:
@@ -702,6 +843,7 @@ def update_finding_status(finding_id):
 @login_required
 def edit_session(session_id):
     testing_session = TestingSession.query.get_or_404(session_id)
+    require_project_access(testing_session.project)
 
     if request.method == 'POST':
         testing_session.name = request.form.get('name')
@@ -720,6 +862,7 @@ def edit_session(session_id):
 @login_required
 def update_session_status(session_id):
     testing_session = TestingSession.query.get_or_404(session_id)
+    require_project_access(testing_session.project)
     new_status = request.form.get('status')
 
     if new_status in ['Active', 'Completed', 'Archived']:
@@ -735,6 +878,7 @@ def update_session_status(session_id):
 @login_required
 def new_finding(session_id):
     testing_session = TestingSession.query.get_or_404(session_id)
+    require_project_access(testing_session.project)
     categories = Category.query.filter_by(project_id=testing_session.project_id).all()
     modules = Module.query.filter_by(project_id=testing_session.project_id).all()
 
@@ -791,13 +935,34 @@ def new_finding(session_id):
 @login_required
 def finding_detail(finding_id):
     finding = Finding.query.get_or_404(finding_id)
-    return render_template('finding_detail.html', finding=finding)
+    require_finding_access(finding)
+    return render_template('finding_detail.html', finding=finding, comments=finding.comments)
+
+
+@app.route('/finding/<int:finding_id>/comment', methods=['POST'])
+@login_required
+def add_finding_comment(finding_id):
+    finding = Finding.query.get_or_404(finding_id)
+    require_finding_access(finding)
+
+    body = request.form.get('body', '').strip()
+    if not body:
+        flash('Comment cannot be empty.', 'error')
+        return redirect(url_for('finding_detail', finding_id=finding.id))
+
+    comment = FindingComment(finding_id=finding.id, user_id=current_user.id, body=body)
+    db.session.add(comment)
+    db.session.commit()
+
+    flash('Comment added successfully!', 'success')
+    return redirect(url_for('finding_detail', finding_id=finding.id))
 
 
 @app.route('/finding/<int:finding_id>/edit', methods=['GET', 'POST'])
 @login_required
 def edit_finding(finding_id):
     finding = Finding.query.get_or_404(finding_id)
+    require_finding_access(finding)
     testing_session = finding.session
     categories = Category.query.filter_by(project_id=testing_session.project_id).all()
     modules = Module.query.filter_by(project_id=testing_session.project_id).all()
@@ -854,6 +1019,7 @@ def edit_finding(finding_id):
 @login_required
 def delete_finding(finding_id):
     finding = Finding.query.get_or_404(finding_id)
+    require_finding_access(finding)
     session_id = finding.session_id
 
     # Delete associated screenshots from filesystem
@@ -873,13 +1039,14 @@ def delete_finding(finding_id):
 def seed_admin_user():
     """Create admin user if it doesn't exist"""
     admin_email = 'admin@zearom.com'
-    admin = User.query.filter_by(email=admin_email).first()
+    admin = User.query.filter(db.func.lower(User.email) == admin_email).first()
 
     if not admin:
         admin = User(
             email=admin_email,
             password=generate_password_hash('admin123'),
             name='Admin User',
+            role='admin',
             is_active=True
         )
         db.session.add(admin)
@@ -898,14 +1065,14 @@ def seed_admin_user():
 # ============================================
 
 @app.route('/users')
-@login_required
+@admin_required
 def users():
     all_users = User.query.order_by(User.created_at.desc()).all()
     return render_template('users.html', users=all_users)
 
 
 @app.route('/user/<int:user_id>/toggle-active', methods=['POST'])
-@login_required
+@admin_required
 def toggle_user_active(user_id):
     user = User.query.get_or_404(user_id)
 
@@ -926,32 +1093,41 @@ def toggle_user_active(user_id):
 
 
 @app.route('/user/new', methods=['GET', 'POST'])
-@login_required
+@admin_required
 def new_user():
+    projects = Project.query.order_by(Project.name.asc()).all()
+
     if request.method == 'POST':
         email = request.form.get('email').strip().lower()
         name = request.form.get('name')
         password = request.form.get('password')
+        role = normalize_role(request.form.get('role'))
+        project_ids = [int(project_id) for project_id in request.form.getlist('project_ids') if project_id.isdigit()]
 
         existing_user = User.query.filter(db.func.lower(User.email) == email).first()
         if existing_user:
             flash('A user with this email already exists!', 'error')
-            return render_template('user_form.html')
+            return render_template('user_form.html', user=None, projects=projects, selected_project_ids=project_ids)
 
         user = User(
             email=email,
             name=name,
             password=generate_password_hash(password) if password else None,
+            role=role,
             is_google_user=not password,
             is_active=True
         )
         db.session.add(user)
         db.session.commit()
 
+        if project_ids:
+            user.accessible_projects = Project.query.filter(Project.id.in_(project_ids)).all()
+            db.session.commit()
+
         flash('User created successfully!', 'success')
         return redirect(url_for('users'))
 
-    return render_template('user_form.html')
+    return render_template('user_form.html', user=None, projects=projects, selected_project_ids=[])
 
 
 # CATEGORY MANAGEMENT ROUTES
@@ -961,6 +1137,7 @@ def new_user():
 @login_required
 def edit_category(category_id):
     category = Category.query.get_or_404(category_id)
+    require_project_access(category.project)
 
     if request.method == 'POST':
         category.name = request.form.get('name')
@@ -978,6 +1155,7 @@ def edit_category(category_id):
 @login_required
 def delete_category(category_id):
     category = Category.query.get_or_404(category_id)
+    require_project_access(category.project)
     project_id = category.project_id
     db.session.delete(category)
     db.session.commit()
@@ -992,6 +1170,7 @@ def delete_category(category_id):
 @login_required
 def delete_screenshot(screenshot_id):
     screenshot = Screenshot.query.get_or_404(screenshot_id)
+    require_finding_access(screenshot.finding)
     finding_id = screenshot.finding_id
 
     try:
@@ -1039,6 +1218,7 @@ def inject_seo_defaults():
 @login_required
 def delete_session(session_id):
     testing_session = TestingSession.query.get_or_404(session_id)
+    require_project_access(testing_session.project)
     project_id = testing_session.project_id
 
     # Delete associated findings and their screenshots
@@ -1065,17 +1245,59 @@ def init_db():
     with app.app_context():
         db.create_all()
 
-        admin = User.query.filter_by(email='Admin@Zearom.com').first()
+        def column_exists(table_name, column_name):
+            rows = db.session.execute(text(f"PRAGMA table_info({table_name})")).all()
+            return any(row[1] == column_name for row in rows)
+
+        def table_exists(table_name):
+            row = db.session.execute(
+                text("SELECT name FROM sqlite_master WHERE type='table' AND name=:table_name"),
+                {'table_name': table_name}
+            ).first()
+            return row is not None
+
+        if table_exists('user') and not column_exists('user', 'role'):
+            db.session.execute(text("ALTER TABLE user ADD COLUMN role VARCHAR(20) NOT NULL DEFAULT 'qa'"))
+            db.session.commit()
+
+        db.session.execute(text(
+            "CREATE TABLE IF NOT EXISTS project_memberships ("
+            "project_id INTEGER NOT NULL, "
+            "user_id INTEGER NOT NULL, "
+            "PRIMARY KEY (project_id, user_id), "
+            "FOREIGN KEY(project_id) REFERENCES project (id), "
+            "FOREIGN KEY(user_id) REFERENCES user (id))"
+        ))
+        db.session.execute(text(
+            "CREATE TABLE IF NOT EXISTS finding_comment ("
+            "id INTEGER NOT NULL PRIMARY KEY, "
+            "finding_id INTEGER NOT NULL, "
+            "user_id INTEGER NOT NULL, "
+            "body TEXT NOT NULL, "
+            "created_at DATETIME, "
+            "FOREIGN KEY(finding_id) REFERENCES finding (id), "
+            "FOREIGN KEY(user_id) REFERENCES user (id))"
+        ))
+        db.session.commit()
+
+        admin = User.query.filter(db.func.lower(User.email) == 'admin@zearom.com').first()
         if not admin:
             admin = User(
-                email='Admin@Zearom.com',
+                email='admin@zearom.com',
                 password=generate_password_hash('Success@Zearom'),
                 name='Admin',
+                role='admin',
                 is_google_user=False
             )
             db.session.add(admin)
             db.session.commit()
-            print("Admin user created: Admin@Zearom.com / Success@Zearom")
+            print("Admin user created: admin@zearom.com / Success@Zearom")
+        else:
+            admin.role = 'admin'
+            admin.is_active = True
+            if not admin.password:
+                admin.password = generate_password_hash('Success@Zearom')
+            db.session.commit()
 
         print(f"Database location: {os.path.join(BASE_DIR, 'zearom_qa.db')}")
         print(f"Upload folder: {app.config['UPLOAD_FOLDER']}")
@@ -1086,10 +1308,13 @@ def init_db():
 @login_required
 def edit_user(user_id):
     user = User.query.get_or_404(user_id)
+    projects = Project.query.order_by(Project.name.asc()).all()
 
     if request.method == 'POST':
         email = request.form.get('email').strip().lower()
         name = request.form.get('name')
+        role = normalize_role(request.form.get('role'))
+        project_ids = [int(project_id) for project_id in request.form.getlist('project_ids') if project_id.isdigit()]
 
         # Check if email is already taken by another user
         existing_user = User.query.filter(
@@ -1103,17 +1328,20 @@ def edit_user(user_id):
 
         user.email = email
         user.name = name
+        user.role = role
+        user.accessible_projects = Project.query.filter(Project.id.in_(project_ids)).all() if project_ids else []
         db.session.commit()
 
         flash('User details updated successfully!', 'success')
         return redirect(url_for('users'))
 
-    return render_template('user_edit.html', user=user)
+    selected_project_ids = [project.id for project in user.accessible_projects]
+    return render_template('user_form.html', user=user, projects=projects, selected_project_ids=selected_project_ids)
 
 
 # Reset User Password Route
 @app.route('/user/<int:user_id>/reset-password', methods=['POST'])
-@login_required
+@admin_required
 def reset_user_password(user_id):
     user = User.query.get_or_404(user_id)
     new_password = request.form.get('new_password')

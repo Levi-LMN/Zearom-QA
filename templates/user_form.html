@@ -1,12 +1,12 @@
 {% extends "base.html" %}
 
-{% block title %}Add User - Zearom QA{% endblock %}
+{% block title %}{% if user %}Edit{% else %}Add{% endif %} User - Zearom QA{% endblock %}
 
 {% block content %}
 <div class="max-w-2xl mx-auto">
     <div class="mb-6">
-        <h1 class="text-gray-900 mb-1">Add New User</h1>
-        <p class="text-sm text-gray-500">Create a new user account for the QA system</p>
+        <h1 class="text-gray-900 mb-1">{% if user %}Edit User{% else %}Add New User{% endif %}</h1>
+        <p class="text-sm text-gray-500">{% if user %}Update access, role, and project scope{% else %}Create a new user account for the QA platform{% endif %}</p>
     </div>
 
     <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
@@ -23,16 +23,42 @@
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
                     <input type="text" name="name"
+                           value="{{ user.name if user else '' }}"
                            class="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
                            placeholder="John Doe">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Role *</label>
+                    <select name="role" required class="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent">
+                        <option value="qa" {% if user and user.role == 'qa' %}selected{% endif %}>QA Engineer</option>
+                        <option value="developer" {% if user and user.role == 'developer' %}selected{% endif %}>Developer</option>
+                        <option value="admin" {% if user and user.role == 'admin' %}selected{% endif %}>Admin</option>
+                    </select>
+                    <p class="text-xs text-gray-500 mt-1">Roles control how a user works with projects and findings.</p>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Project Access</label>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 rounded-xl border border-gray-200 p-3 max-h-64 overflow-y-auto">
+                        {% for project in projects %}
+                        <label class="flex items-start space-x-3 p-3 rounded-lg border border-gray-100 hover:border-green-200 hover:bg-green-50 transition cursor-pointer">
+                            <input type="checkbox" name="project_ids" value="{{ project.id }}"
+                                   {% if project.id in (selected_project_ids or []) %}checked{% endif %}
+                                   class="mt-0.5 h-4 w-4 rounded border-gray-300 text-green-600 focus:ring-green-500">
+                            <span class="text-sm text-gray-700">{{ project.name }}</span>
+                        </label>
+                        {% endfor %}
+                    </div>
+                    <p class="text-xs text-gray-500 mt-1">Select one or more projects this user should access.</p>
                 </div>
 
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">Password</label>
                     <input type="password" name="password"
                            class="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                           placeholder="Leave blank for Google OAuth only">
-                    <p class="text-xs text-gray-500 mt-1">Leave blank if user will sign in with Google OAuth only</p>
+                           placeholder="{% if user %}Leave blank to keep existing password{% else %}Leave blank for Google OAuth only{% endif %}">
+                    <p class="text-xs text-gray-500 mt-1">{% if user %}Leave blank if you do not want to change the password{% else %}Leave blank if user will sign in with Google OAuth only{% endif %}</p>
                 </div>
 
                 <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
@@ -41,8 +67,8 @@
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
                         </svg>
                         <div>
-                            <h4 class="text-sm font-medium text-blue-900 mb-1">Authentication Options</h4>
-                            <p class="text-xs text-blue-700">Users can sign in with either a password or Google OAuth. If you set a password, they can use both methods.</p>
+                            <h4 class="text-sm font-medium text-blue-900 mb-1">Access Notes</h4>
+                            <p class="text-xs text-blue-700">Users can sign in with either a password or Google OAuth. Their role and project access determine what they can see and change.</p>
                         </div>
                     </div>
                 </div>
@@ -53,7 +79,7 @@
                         Cancel
                     </a>
                     <button type="submit" class="btn-primary text-white px-5 py-2.5 rounded-lg text-sm font-medium">
-                        Add User
+                        {% if user %}Save Changes{% else %}Add User{% endif %}
                     </button>
                 </div>
             </div>

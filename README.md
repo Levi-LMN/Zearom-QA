@@ -32,6 +32,7 @@ A comprehensive Flask-based Quality Assurance management application for trackin
 
 - **User Tracking**
   - Track who created each project, category, session, and finding
+  - Assign users roles and project access for QA engineers, developers, and admins
   - Display user information throughout the app
 
 - **Modern UI**
@@ -152,9 +153,9 @@ The application will:
 ## Database Schema
 
 ### Users
-- Email, password, name
+- Email, password, name, role
 - Google OAuth flag
-- Relationships: projects, categories, findings
+- Relationships: created projects, assigned projects, categories, findings, comments
 
 ### Projects
 - Name, description
