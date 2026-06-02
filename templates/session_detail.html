@@ -30,12 +30,16 @@
             {% endif %}
         </div>
         <div class="flex space-x-3">
+            {% if current_user.is_authenticated and current_user.role == 'admin' %}
             <a href="{{ url_for('edit_session', session_id=testing_session.id) }}" class="text-gray-700 bg-white border border-gray-200 px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-gray-50">
                 Edit Session
             </a>
+            {% endif %}
+            {% if current_user.is_authenticated and current_user.role in ['admin', 'qa'] %}
             <a href="{{ url_for('new_finding', session_id=testing_session.id) }}" class="btn-primary text-white px-5 py-2.5 rounded-lg text-sm font-medium">
                 Add Finding
             </a>
+            {% endif %}
         </div>
     </div>
 </div>
@@ -259,9 +263,11 @@
                                 View
                             </a>
                             <span class="text-gray-300">|</span>
+                            {% if current_user.is_authenticated and current_user.role == 'admin' %}
                             <a href="{{ url_for('edit_finding', finding_id=finding.id) }}" class="text-sm text-gray-600 hover:text-gray-700 font-medium">
                                 Edit
                             </a>
+                            {% endif %}
                         </div>
                     </td>
                 </tr>
@@ -281,9 +287,13 @@
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
                         </svg>
                         <p class="text-sm text-gray-500 mb-4">No findings yet</p>
+                        {% if current_user.is_authenticated and current_user.role in ['admin', 'qa'] %}
                         <a href="{{ url_for('new_finding', session_id=testing_session.id) }}" class="inline-flex items-center text-sm text-green-600 hover:text-green-700 font-medium">
                             Add your first finding
                         </a>
+                        {% else %}
+                        <p class="text-xs text-gray-400">Only QA engineers and admins can create findings.</p>
+                        {% endif %}
                         {% endif %}
                     </td>
                 </tr>
