@@ -522,6 +522,81 @@ def projects():
     return render_template('projects.html', projects=all_projects)
 
 
+# Preset templates for quick project initialization
+PROJECT_TEMPLATES = {
+    'web_app': {
+        'label': 'Web Application',
+        'categories': [
+            {'name': 'UI / Visual', 'color': '#3B82F6', 'description': 'Layout, design, and visual presentation issues'},
+            {'name': 'Functionality', 'color': '#10B981', 'description': 'Features not working as expected'},
+            {'name': 'Performance', 'color': '#F59E0B', 'description': 'Slow load times, memory leaks, and responsiveness'},
+            {'name': 'Security', 'color': '#EF4444', 'description': 'Authentication, authorization, and data exposure issues'},
+            {'name': 'Accessibility', 'color': '#8B5CF6', 'description': 'WCAG compliance and screen reader support'},
+            {'name': 'Cross-browser', 'color': '#6B7280', 'description': 'Browser-specific compatibility issues'},
+        ],
+        'modules': [
+            {'name': 'Authentication', 'color': '#EF4444', 'description': 'Login, registration, password reset, OAuth'},
+            {'name': 'Dashboard', 'color': '#3B82F6', 'description': 'Main dashboard views and widgets'},
+            {'name': 'User Management', 'color': '#8B5CF6', 'description': 'Profile, settings, roles and permissions'},
+            {'name': 'API / Integrations', 'color': '#F59E0B', 'description': 'Third-party integrations and REST/GraphQL endpoints'},
+            {'name': 'Notifications', 'color': '#10B981', 'description': 'Email, in-app, and push notifications'},
+        ],
+    },
+    'mobile_app': {
+        'label': 'Mobile Application',
+        'categories': [
+            {'name': 'UI / Visual', 'color': '#3B82F6', 'description': 'Layout, design, and visual presentation issues'},
+            {'name': 'Functionality', 'color': '#10B981', 'description': 'Features not working as expected'},
+            {'name': 'Performance', 'color': '#F59E0B', 'description': 'Startup time, jank, and battery usage'},
+            {'name': 'Crash / Stability', 'color': '#EF4444', 'description': 'App crashes and unexpected exits'},
+            {'name': 'Device Compatibility', 'color': '#8B5CF6', 'description': 'Issues on specific device models or OS versions'},
+            {'name': 'Offline / Sync', 'color': '#6B7280', 'description': 'Offline behavior and data synchronization'},
+        ],
+        'modules': [
+            {'name': 'Onboarding', 'color': '#10B981', 'description': 'Splash screen, permissions, and first-run flow'},
+            {'name': 'Authentication', 'color': '#EF4444', 'description': 'Login, biometrics, and session handling'},
+            {'name': 'Home Screen', 'color': '#3B82F6', 'description': 'Main home/feed screen'},
+            {'name': 'Profile', 'color': '#8B5CF6', 'description': 'User profile and account settings'},
+            {'name': 'Push Notifications', 'color': '#F59E0B', 'description': 'Notification delivery and deep-linking'},
+        ],
+    },
+    'api': {
+        'label': 'API / Backend',
+        'categories': [
+            {'name': 'Correctness', 'color': '#10B981', 'description': 'Wrong data returned or business logic errors'},
+            {'name': 'Performance', 'color': '#F59E0B', 'description': 'Response time, throughput, and bottlenecks'},
+            {'name': 'Security', 'color': '#EF4444', 'description': 'Auth, injection, rate limiting, and data exposure'},
+            {'name': 'Error Handling', 'color': '#8B5CF6', 'description': 'Missing or incorrect error responses'},
+            {'name': 'Documentation', 'color': '#3B82F6', 'description': 'Incorrect or missing API docs'},
+        ],
+        'modules': [
+            {'name': 'Authentication', 'color': '#EF4444', 'description': 'Token issuance, refresh, and validation'},
+            {'name': 'User Endpoints', 'color': '#8B5CF6', 'description': '/users CRUD and related endpoints'},
+            {'name': 'Core Business Logic', 'color': '#3B82F6', 'description': 'Primary domain-specific endpoints'},
+            {'name': 'Webhooks', 'color': '#F59E0B', 'description': 'Outgoing event webhooks'},
+            {'name': 'Admin Endpoints', 'color': '#6B7280', 'description': 'Admin-only management endpoints'},
+        ],
+    },
+    'ecommerce': {
+        'label': 'E-Commerce',
+        'categories': [
+            {'name': 'UI / Visual', 'color': '#3B82F6', 'description': 'Layout, design, and visual presentation issues'},
+            {'name': 'Functionality', 'color': '#10B981', 'description': 'Features not working as expected'},
+            {'name': 'Payments', 'color': '#EF4444', 'description': 'Checkout, payment gateway, and billing issues'},
+            {'name': 'Performance', 'color': '#F59E0B', 'description': 'Page speed and scalability under load'},
+            {'name': 'Security', 'color': '#DC2626', 'description': 'PCI compliance and data protection'},
+        ],
+        'modules': [
+            {'name': 'Product Catalog', 'color': '#3B82F6', 'description': 'Listings, search, filtering, and detail pages'},
+            {'name': 'Cart & Checkout', 'color': '#EF4444', 'description': 'Add to cart, cart management, and checkout flow'},
+            {'name': 'Payments', 'color': '#F59E0B', 'description': 'Payment gateway integration and order confirmation'},
+            {'name': 'User Accounts', 'color': '#8B5CF6', 'description': 'Registration, login, and order history'},
+            {'name': 'Admin / Inventory', 'color': '#6B7280', 'description': 'Product management and stock control'},
+        ],
+    },
+}
+
+
 @app.route('/project/new', methods=['GET', 'POST'])
 @login_required
 @admin_required
@@ -529,17 +604,44 @@ def new_project():
     if request.method == 'POST':
         name = request.form.get('name')
         description = request.form.get('description')
+        template_key = request.form.get('template', '')
 
         project = Project(name=name, description=description, created_by=current_user.id)
         db.session.add(project)
-        db.session.commit()
+        db.session.flush()  # get project.id before commit
         project.members.append(current_user)
-        db.session.commit()
 
+        # Seed categories and modules if a template was chosen
+        if template_key and template_key in PROJECT_TEMPLATES:
+            template = PROJECT_TEMPLATES[template_key]
+            selected_cats = request.form.getlist('init_categories')
+            selected_mods = request.form.getlist('init_modules')
+
+            for cat_data in template['categories']:
+                if cat_data['name'] in selected_cats:
+                    db.session.add(Category(
+                        name=cat_data['name'],
+                        description=cat_data['description'],
+                        color=cat_data['color'],
+                        project_id=project.id,
+                        created_by=current_user.id
+                    ))
+
+            for mod_data in template['modules']:
+                if mod_data['name'] in selected_mods:
+                    db.session.add(Module(
+                        name=mod_data['name'],
+                        description=mod_data['description'],
+                        color=mod_data['color'],
+                        project_id=project.id,
+                        created_by=current_user.id
+                    ))
+
+        db.session.commit()
         flash('Project created successfully!', 'success')
         return redirect(url_for('project_detail', project_id=project.id))
 
-    return render_template('project_form.html')
+    return render_template('project_form.html', templates=PROJECT_TEMPLATES)
 
 
 @app.route('/project/<int:project_id>')
