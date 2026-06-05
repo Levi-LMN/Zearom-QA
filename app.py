@@ -314,7 +314,7 @@ def login():
         password = request.form.get('password')
         user = User.query.filter(db.func.lower(User.email) == email).first()
 
-        if user and check_password_hash(user.password, password):
+        if user and user.password and check_password_hash(user.password, password):
             if not user.is_active:
                 flash('Your account has been deactivated. Please contact an administrator.', 'error')
             else:
