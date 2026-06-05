@@ -34,7 +34,7 @@ BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 
 # Initialize Flask app
 app = Flask(__name__)
-app.config['SECRET_KEY'] = secrets.token_hex(32)
+app.config['SECRET_KEY'] = 'zearom-qa-dev-secret-key-do-not-use-in-production'
 app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{os.path.join(BASE_DIR, "zearom_qa.db")}'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['UPLOAD_FOLDER'] = os.path.join(BASE_DIR, 'static', 'uploads')
@@ -318,7 +318,7 @@ def login():
             if not user.is_active:
                 flash('Your account has been deactivated. Please contact an administrator.', 'error')
             else:
-                login_user(user)
+                login_user(user, remember=True)
                 return redirect(url_for('dashboard'))
         else:
             flash('Invalid email or password', 'error')
@@ -354,7 +354,7 @@ def callback():
                 user.name = user_info.get('name')
                 db.session.commit()
 
-            login_user(user)
+            login_user(user, remember=True)
             return redirect(url_for('dashboard'))
     except Exception as e:
         flash('Google login failed. Please try again.', 'error')
